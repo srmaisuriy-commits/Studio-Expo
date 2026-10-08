@@ -1,0 +1,6 @@
+{
+  "name": "Studio Expo",
+  "description": "Studio booking calendar and management app with distinct Owner and Customer flows for photographers.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

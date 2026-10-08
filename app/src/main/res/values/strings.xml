@@ -1,0 +1,19 @@
+<resources>
+    <string name="app_name">Studio Expo</string>
+    <string name="app_tagline">Smart Photography Studio &amp; Booking Management</string>
+    <string name="owner_portal">Studio Owner</string>
+    <string name="customer_portal">Customer Booking</string>
+    <string name="login_title">Studio Owner Login</string>
+    <string name="enter_pin">Enter 4-Digit Owner PIN</string>
+    <string name="dashboard">Home Dashboard</string>
+    <string name="calendar">Calendar</string>
+    <string name="free_dates">Free Dates</string>
+    <string name="booked_dates">Booked Dates</string>
+    <string name="add_free_date">Add Free Date</string>
+    <string name="share_whatsapp">Share on WhatsApp</string>
+    <string name="booking_requests">Booking Requests</string>
+    <string name="confirm_booking">Confirm Booking</string>
+    <string name="reject_booking">Reject</string>
+    <string name="book_date">Book Date</string>
+    <string name="booking_success">Booking Request Sent</string>
+</resources>
