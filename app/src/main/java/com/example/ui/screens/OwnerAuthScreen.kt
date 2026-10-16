@@ -302,7 +302,7 @@ fun OwnerAuthScreen(
                                 try {
                                     val credentialManager = CredentialManager.create(context)
                                     val googleIdOption = GetSignInWithGoogleOption.Builder(
-                                        serverClientId = "112714413477.apps.googleusercontent.com"
+                                        serverClientId = "112714413477-g5cjkv45pmdieuinr99ejdadrqeg6e59.apps.googleusercontent.com"
                                     ).build()
 
                                     val request = GetCredentialRequest.Builder()
