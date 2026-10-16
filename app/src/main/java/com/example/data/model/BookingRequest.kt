@@ -9,7 +9,7 @@ data class BookingRequest(
     val dateStr: String, // "yyyy-MM-dd"
     val customerName: String,
     val customerPhone: String,
-    val workType: String, // e.g. "Wedding / લગ્ન"
+    val workType: String, // e.g. "Wedding / शादी"
     val amount: Double = 0.0,
     val location: String = "",
     val notes: String = "",

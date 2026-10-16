@@ -87,7 +87,7 @@ fun OwnerBookingRequestsScreen(
             color = MaterialTheme.colorScheme.onBackground
         )
         Text(
-            text = "ગ્રાહકો દ્વારા મોકલેલી બુકિંગ વિનંતીઓ સ્વીકારો અથવા રદ કરો",
+            text = "Review and accept or reject customer booking requests / ग्राहकों के बुकिंग अनुरोध देखें",
             fontSize = 12.sp,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -100,10 +100,10 @@ fun OwnerBookingRequestsScreen(
             modifier = Modifier.fillMaxWidth()
         ) {
             val filters = listOf(
-                "ALL" to "બધા (${bookings.size})",
-                "PENDING" to "🟡 Pending (${bookings.count { it.status == BookingStatus.PENDING.name }})",
-                "CONFIRMED" to "✅ Confirmed (${bookings.count { it.status == BookingStatus.CONFIRMED.name }})",
-                "REJECTED" to "❌ Rejected (${bookings.count { it.status == BookingStatus.REJECTED.name }})"
+                "ALL" to "All / सभी (${bookings.size})",
+                "PENDING" to "🟡 Pending / लंबित (${bookings.count { it.status == BookingStatus.PENDING.name }})",
+                "CONFIRMED" to "✅ Confirmed / स्वीकृत (${bookings.count { it.status == BookingStatus.CONFIRMED.name }})",
+                "REJECTED" to "❌ Rejected / अस्वीकृत (${bookings.count { it.status == BookingStatus.REJECTED.name }})"
             )
             items(filters) { (key, label) ->
                 FilterChip(
@@ -128,7 +128,7 @@ fun OwnerBookingRequestsScreen(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "કોઈ વિનંતી મળી નથી.",
+                    text = "No requests found / कोई अनुरोध नहीं मिला",
                     fontSize = 14.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

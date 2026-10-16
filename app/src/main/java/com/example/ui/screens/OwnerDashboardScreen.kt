@@ -91,14 +91,14 @@ fun OwnerDashboardScreen(
             ) {
                 Column(modifier = Modifier.padding(18.dp)) {
                     Text(
-                        text = "નમસ્તે, ${profile?.photographerName ?: "Photographer"} 👋",
+                        text = "Hello, ${profile?.photographerName ?: "Photographer"} 👋 (नमस्ते)",
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "${profile?.studioName ?: "Studio Expo"} • ${profile?.city ?: "Gujarat"}",
+                        text = "${profile?.studioName ?: "Studio Expo"} • ${profile?.city ?: "India"} • 💰 ₹${(profile?.perDayRate ?: 25000.0).toInt()}/Day",
                         fontSize = 13.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -115,7 +115,7 @@ fun OwnerDashboardScreen(
                 MetricCard(
                     title = "Free Dates",
                     count = freeCount.toString(),
-                    labelGuj = "🟢 ઉપલબ્ધ",
+                    labelHindi = "🟢 उपलब्ध",
                     color = StatusFreeGreen,
                     modifier = Modifier.weight(1f)
                 )
@@ -123,7 +123,7 @@ fun OwnerDashboardScreen(
                 MetricCard(
                     title = "Booked",
                     count = bookedCount.toString(),
-                    labelGuj = "🔴 બુક થયેલ",
+                    labelHindi = "🔴 बुक",
                     color = StatusBookedRed,
                     modifier = Modifier.weight(1f)
                 )
@@ -131,7 +131,7 @@ fun OwnerDashboardScreen(
                 MetricCard(
                     title = "Pending Req",
                     count = pendingCount.toString(),
-                    labelGuj = "🟡 વિનંતીઓ",
+                    labelHindi = "🟡 अनुरोध",
                     color = StatusPendingAmber,
                     modifier = Modifier
                         .weight(1f)
@@ -143,7 +143,7 @@ fun OwnerDashboardScreen(
         // Quick Actions Grid
         item {
             Text(
-                text = "ઝડપી ક્રિયાઓ (Quick Actions)",
+                text = "Quick Actions (त्वरित कार्य)",
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onBackground
@@ -156,7 +156,7 @@ fun OwnerDashboardScreen(
             ) {
                 QuickActionCard(
                     title = "Add Free Date",
-                    subtitle = "➕ તારીખ ઉમેરો",
+                    subtitle = "➕ तारीख जोड़ें",
                     icon = Icons.Default.Add,
                     iconBg = StatusFreeGreen,
                     onClick = onAddFreeDateClick,
@@ -167,7 +167,7 @@ fun OwnerDashboardScreen(
 
                 QuickActionCard(
                     title = "Share WhatsApp",
-                    subtitle = "📲 લિંક મોકલો",
+                    subtitle = "📲 लिंक भेजें",
                     icon = Icons.Default.Share,
                     iconBg = StudioAmber,
                     onClick = onShareWhatsAppClick,
@@ -185,7 +185,7 @@ fun OwnerDashboardScreen(
             ) {
                 QuickActionCard(
                     title = "View Calendar",
-                    subtitle = "📅 કેલેન્ડર",
+                    subtitle = "📅 कैलेंडर देखें",
                     icon = Icons.Default.CalendarMonth,
                     iconBg = Color(0xFF3B82F6),
                     onClick = onNavigateCalendar,
@@ -196,7 +196,7 @@ fun OwnerDashboardScreen(
 
                 QuickActionCard(
                     title = "Requests ($pendingCount)",
-                    subtitle = "🔔 વિગતો જુઓ",
+                    subtitle = "🔔 अनुरोध विवरण",
                     icon = Icons.Default.Notifications,
                     iconBg = StatusPendingAmber,
                     onClick = onNavigateRequests,
@@ -210,7 +210,7 @@ fun OwnerDashboardScreen(
 
             QuickActionCard(
                 title = "Set WhatsApp Message & Gear",
-                subtitle = "📝 કેમેરા વિગતો અને આખો મેસેજ સેટ કરો",
+                subtitle = "📝 कैमरा विवरण व मैसेज टेम्पलेट सेट करें",
                 icon = Icons.Default.EditNote,
                 iconBg = StudioAmber,
                 onClick = onSetMessageTemplateClick,
@@ -228,14 +228,14 @@ fun OwnerDashboardScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "🔔 નવી બુકિંગ વિનંતીઓ (Pending Requests)",
+                    text = "🔔 New Pending Requests (नई बुकिंग अनुरोध)",
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onBackground
                 )
                 if (pendingRequests.isNotEmpty()) {
                     TextButton(onClick = onNavigateRequests) {
-                        Text("બધા જુઓ (${pendingRequests.size})", color = StudioAmber, fontSize = 12.sp)
+                        Text("View All / सभी देखें (${pendingRequests.size})", color = StudioAmber, fontSize = 12.sp)
                     }
                 }
             }
@@ -255,13 +255,13 @@ fun OwnerDashboardScreen(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
-                            text = "🎉 હાલમાં કોઈ પેન્ડિંગ વિનંતી નથી!",
+                            text = "🎉 No pending requests currently / वर्तमान में कोई लंबित अनुरोध नहीं है",
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Medium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Text(
-                            text = "ગ્રાહકો સાથે WhatsApp પર Free Dates શેર કરો જેથી વિનંતીઓ મળી શકે.",
+                            text = "Share Free Dates on WhatsApp with clients to get bookings / व्हाट्सएप पर तारीखें शेयर करें",
                             fontSize = 12.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
                             modifier = Modifier.padding(top = 4.dp)
@@ -364,13 +364,13 @@ fun OwnerDashboardScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "🟢 ઉપલબ્ધ તારીખો (Available Slots)",
+                    text = "🟢 Available Slots (उपलब्ध तारीखें)",
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onBackground
                 )
                 TextButton(onClick = onNavigateCalendar) {
-                    Text("કેલેન્ડર જુઓ", color = StudioAmber, fontSize = 12.sp)
+                    Text("View Calendar / कैलेंडर देखें", color = StudioAmber, fontSize = 12.sp)
                 }
             }
         }
@@ -379,7 +379,7 @@ fun OwnerDashboardScreen(
         if (upcomingFree.isEmpty()) {
             item {
                 Text(
-                    text = "હાલમાં કોઈ Free Date સેટ કરેલી નથી. 'Add Free Date' પર ક્લિક કરો.",
+                    text = "No free dates currently set. Tap 'Add Free Date' to set dates / कोई तारीख उपलब्ध नहीं है।",
                     fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -419,7 +419,7 @@ fun OwnerDashboardScreen(
 private fun MetricCard(
     title: String,
     count: String,
-    labelGuj: String,
+    labelHindi: String,
     color: Color,
     modifier: Modifier = Modifier
 ) {
@@ -448,7 +448,7 @@ private fun MetricCard(
                 color = MaterialTheme.colorScheme.onSurface
             )
             Text(
-                text = labelGuj,
+                text = labelHindi,
                 fontSize = 10.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

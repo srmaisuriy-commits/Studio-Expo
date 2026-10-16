@@ -117,13 +117,23 @@ fun CustomerBookingScreen(
         }
     }
 
+    // Per Day Rate set by Owner in StudioProfile
+    val perDayRate = profile?.perDayRate ?: 25000.0
+    val daysCount = if (selectedDates.isEmpty()) 1 else selectedDates.size
+
     // Form inputs state
     var customerName by remember { mutableStateOf("") }
     var customerPhone by remember { mutableStateOf("") }
     var selectedWorkType by remember { mutableStateOf(WorkTypeCatalog.allTypes.first()) }
-    var estimatedAmount by remember { mutableStateOf(selectedWorkType.defaultEstimate.toInt().toString()) }
+    var estimatedAmount by remember { mutableStateOf((perDayRate * daysCount).toInt().toString()) }
     var venueLocation by remember { mutableStateOf("") }
     var notesText by remember { mutableStateOf("") }
+
+    // Auto-update total estimated package whenever total selected days or owner's per-day price updates
+    androidx.compose.runtime.LaunchedEffect(selectedDates.size, perDayRate) {
+        val count = if (selectedDates.isEmpty()) 1 else selectedDates.size
+        estimatedAmount = (perDayRate * count).toInt().toString()
+    }
 
     val bookedDatesSummary = remember(selectedDates) {
         if (selectedDates.isEmpty()) selectedDate ?: ""
@@ -309,7 +319,7 @@ fun CustomerBookingScreen(
                         )
                         Spacer(modifier = Modifier.width(10.dp))
                         Text(
-                            text = "🟢 Free તેમજ ખાલી (Open) તારીખો બુક કરી શકાય છે. તમે એક સાથે એક કરતાં વધુ તારીખો પણ પસંદ કરી શકો છો! (🔴 લાલ Booked તારીખો બુક નહીં થાય)",
+                            text = "🟢 Free and Open (⚪) dates can be booked. You can select multiple dates together! (🔴 Booked dates cannot be booked) / 🟢 Free और खुली तारीखें बुक कर सकते हैं। एक साथ कई तारीखें चुन सकते हैं!",
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Medium,
                             color = MaterialTheme.colorScheme.onSurface
@@ -335,7 +345,7 @@ fun CustomerBookingScreen(
                         if (isBooked) {
                             Toast.makeText(
                                 context,
-                                "🔴 આ તારીખ પહેલાંથી બુક થયેલી છે (BOOKED)! આ તારીખ બુક નહીં થાય. ફક્ત 🟢 Free અથવા ખાલી (Open) તારીખો જ પસંદ કરી શકાય છે.",
+                                "🔴 This date is already BOOKED! Please select Free (🟢) or Open (⚪) dates / यह तारीख पहले से बुक है। कृपया उपलब्ध तारीख चुनें।",
                                 Toast.LENGTH_LONG
                             ).show()
                         } else {
@@ -351,7 +361,7 @@ fun CustomerBookingScreen(
                                 }
                                 Toast.makeText(
                                     context,
-                                    "તારીખ દૂર કરી: ${DateUtils.formatForDisplay(isoDate)}",
+                                    "Date unselected / तारीख हटाई गई: ${DateUtils.formatForDisplay(isoDate)}",
                                     Toast.LENGTH_SHORT
                                 ).show()
                             } else {
@@ -359,9 +369,9 @@ fun CustomerBookingScreen(
                                 selectedDates = currentSet
                                 onSelectDate(isoDate)
                                 val msg = if (isFree) {
-                                    "🟢 Free તારીખ ઉમેરી: ${DateUtils.formatForDisplay(isoDate)}"
+                                    "🟢 Free date selected: ${DateUtils.formatForDisplay(isoDate)}"
                                 } else {
-                                    "⚪ ખાલી તારીખ ઉમેરી: ${DateUtils.formatForDisplay(isoDate)}"
+                                    "⚪ Open date selected: ${DateUtils.formatForDisplay(isoDate)}"
                                 }
                                 Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
                             }
@@ -395,7 +405,7 @@ fun CustomerBookingScreen(
                                     )
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Text(
-                                        text = "તમે પસંદ કરેલી તારીખો (${selectedDates.size} Selected):",
+                                        text = "Selected Dates / चयनित तारीखें (${selectedDates.size} Selected):",
                                         fontSize = 13.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = MaterialTheme.colorScheme.onSurface
@@ -406,12 +416,12 @@ fun CustomerBookingScreen(
                                     onClick = {
                                         selectedDates = emptySet()
                                         onSelectDate("")
-                                        Toast.makeText(context, "બધી પસંદગી સાફ કરી", Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(context, "All selections cleared / सभी चयन साफ़ किए गए", Toast.LENGTH_SHORT).show()
                                     },
                                     contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp)
                                 ) {
                                     Text(
-                                        text = "Clear / સાફ કરો",
+                                        text = "Clear / साफ़ करें",
                                         fontSize = 11.sp,
                                         color = MaterialTheme.colorScheme.error,
                                         fontWeight = FontWeight.Bold
@@ -461,7 +471,7 @@ fun CustomerBookingScreen(
                                                     val newSet = selectedDates - dateIso
                                                     selectedDates = newSet
                                                     if (newSet.isEmpty()) onSelectDate("") else onSelectDate(newSet.last())
-                                                    Toast.makeText(context, "તારીખ કાઢી: ${DateUtils.formatForDisplay(dateIso)}", Toast.LENGTH_SHORT).show()
+                                                    Toast.makeText(context, "Date removed / तारीख हटाई गई: ${DateUtils.formatForDisplay(dateIso)}", Toast.LENGTH_SHORT).show()
                                                 }
                                         )
                                     }
@@ -470,7 +480,7 @@ fun CustomerBookingScreen(
 
                             Spacer(modifier = Modifier.height(6.dp))
                             Text(
-                                text = "💡 કેલેન્ડર પર ફરીથી Tap કરીને કોઈપણ તારીખ ઉમેરી અથવા કાઢી શકો છો.",
+                                text = "💡 Tap dates on calendar to add or remove dates / कैलेंडर पर टैप करके तारीखें जोड़ें या हटाएं।",
                                 fontSize = 11.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -484,6 +494,7 @@ fun CustomerBookingScreen(
                 item {
                     CustomerBookingFormCard(
                         selectedDates = selectedDates,
+                        perDayRate = perDayRate,
                         customerName = customerName,
                         customerPhone = customerPhone,
                         selectedWorkType = selectedWorkType,
@@ -494,21 +505,20 @@ fun CustomerBookingScreen(
                         onPhoneChange = { customerPhone = it },
                         onWorkTypeSelect = { workType ->
                             selectedWorkType = workType
-                            val count = selectedDates.size
-                            val base = workType.defaultEstimate
-                            estimatedAmount = if (count > 1) (base * count).toInt().toString() else base.toInt().toString()
+                            val count = if (selectedDates.isEmpty()) 1 else selectedDates.size
+                            estimatedAmount = (perDayRate * count).toInt().toString()
                         },
                         onAmountChange = { estimatedAmount = it },
                         onLocationChange = { venueLocation = it },
                         onNotesChange = { notesText = it },
                         onSubmit = {
-                            val count = selectedDates.size
-                            val amount = estimatedAmount.toDoubleOrNull() ?: (selectedWorkType.defaultEstimate * count)
+                            val count = if (selectedDates.isEmpty()) 1 else selectedDates.size
+                            val amount = estimatedAmount.toDoubleOrNull() ?: (perDayRate * count)
                             onSubmitBooking(
                                 selectedDates.toList().sorted(),
                                 customerName,
                                 customerPhone,
-                                "${selectedWorkType.englishName} (${selectedWorkType.gujaratiName})",
+                                selectedWorkType.displayName,
                                 amount,
                                 venueLocation,
                                 notesText
@@ -530,14 +540,14 @@ fun CustomerBookingScreen(
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             Text(
-                                text = "📅 કેલેન્ડરમાંથી 🟢 Free અથવા ખાલી (Open) તારીખો પસંદ કરો",
+                                text = "📅 Select 🟢 Free or Open (⚪) dates from Calendar / कैलेंडर से तारीखें चुनें",
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 color = MaterialTheme.colorScheme.onSurface,
                                 textAlign = TextAlign.Center
                             )
                             Text(
-                                text = "તમે એક સાથે એક કરતાં વધુ તારીખો પણ પસંદ કરી શકો છો. તારીખ પસંદ કરતાં જ બુકિંગ ફોર્મ ખૂલશે.",
+                                text = "You can select multiple dates together. Tap date to open booking form / एक साथ कई तारीखें चुन सकते हैं।",
                                 fontSize = 12.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 textAlign = TextAlign.Center,
@@ -551,7 +561,7 @@ fun CustomerBookingScreen(
             // Tab 1: Customer My Requests List
             item {
                 Text(
-                    text = "મારી બુકિંગ વિનંતીઓ (Submitted Requests)",
+                    text = "My Booking Requests / मेरी बुकिंग अनुरोध (Submitted Requests)",
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onBackground
@@ -572,7 +582,7 @@ fun CustomerBookingScreen(
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             Text(
-                                text = "હજી સુધી કોઈ વિનંતી સબમિટ કરેલી નથી.",
+                                text = "No requests submitted yet / अभी तक कोई अनुरोध नहीं भेजा गया है।",
                                 fontSize = 14.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -581,7 +591,7 @@ fun CustomerBookingScreen(
                                 onClick = { selectedTab = 0 },
                                 shape = RoundedCornerShape(10.dp)
                             ) {
-                                Text("તારીખ બુક કરો")
+                                Text("Book Dates / तारीखें बुक करें")
                             }
                         }
                     }
@@ -629,9 +639,9 @@ fun CustomerBookingScreen(
 
                             // Status Explanation for Customer
                             val statusExplanation = when (req.status) {
-                                "PENDING" -> "⏳ વિનંતી ઓનર સમક્ષ પેન્ડિંગ છે. ઓનર તરફથી Confirm થયા પછી તારીખ બુક થશે."
-                                "CONFIRMED" -> "🎉 અભિનંદન! ઓનર દ્વારા તમારું બુકિંગ Confirm કરવામાં આવ્યું છે!"
-                                "REJECTED" -> "❌ આ તારીખ માટે વિનંતી સ્વીકારાઈ નથી. કૃપા કરીને અન્ય તારીખ પસંદ કરો."
+                                "PENDING" -> "⏳ Request is pending with studio owner. Will be confirmed shortly / अनुरोध ओनर के पास पेंडिंग है।"
+                                "CONFIRMED" -> "🎉 Congratulations! Your booking is confirmed by studio owner / आपका बुकिंग कन्फर्म हो गया है!"
+                                "REJECTED" -> "❌ Request was not accepted for this date. Please select another date / अनुरोध अस्वीकृत हुआ।"
                                 else -> ""
                             }
 
@@ -651,6 +661,7 @@ fun CustomerBookingScreen(
 @Composable
 private fun CustomerBookingFormCard(
     selectedDates: Set<String>,
+    perDayRate: Double,
     customerName: String,
     customerPhone: String,
     selectedWorkType: com.example.data.model.WorkType,
@@ -698,9 +709,9 @@ private fun CustomerBookingFormCard(
                 Column {
                     Text(
                         text = if (selectedDates.size > 1) {
-                            "Selected Dates / ${selectedDates.size} તારીખો પસંદ કરેલ:"
+                            "Selected Dates / ${selectedDates.size} तारीखें चुनी गईं:"
                         } else {
-                            "Selected Date / પસંદ કરેલી તારીખ:"
+                            "Selected Date / चुनी गई तारीख:"
                         },
                         fontSize = 11.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -722,7 +733,7 @@ private fun CustomerBookingFormCard(
             OutlinedTextField(
                 value = customerName,
                 onValueChange = onNameChange,
-                label = { Text("તમારું પૂરું નામ (Your Full Name) *") },
+                label = { Text("Your Full Name (आपका पूरा नाम) *") },
                 leadingIcon = {
                     Icon(imageVector = Icons.Default.Person, contentDescription = null, tint = StudioAmber)
                 },
@@ -736,7 +747,7 @@ private fun CustomerBookingFormCard(
             OutlinedTextField(
                 value = customerPhone,
                 onValueChange = onPhoneChange,
-                label = { Text("મોબાઇલ / WhatsApp નંબર *") },
+                label = { Text("Mobile / WhatsApp Number (फ़ोन नंबर) *") },
                 leadingIcon = {
                     Icon(imageVector = Icons.Default.Phone, contentDescription = null, tint = StudioAmber)
                 },
@@ -749,7 +760,7 @@ private fun CustomerBookingFormCard(
 
             // Work / Exposure Type Selector
             Text(
-                text = "📸 કાર્યક્રમ / શૂટનો પ્રકાર (Work Type):",
+                text = "📸 Event / Shoot Type (इवेंट का प्रकार):",
                 fontSize = 13.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface
@@ -772,7 +783,7 @@ private fun CustomerBookingFormCard(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "${type.iconEmoji} ${type.englishName}",
+                            text = "${type.iconEmoji} ${type.englishName} (${type.hindiName})",
                             fontSize = 12.sp,
                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
                             color = if (isSelected) Color.Black else MaterialTheme.colorScheme.onSurface
@@ -782,27 +793,46 @@ private fun CustomerBookingFormCard(
             }
 
             // Amount / Budget
+            val days = if (selectedDates.isEmpty()) 1 else selectedDates.size
+            val calculatedTotal = (perDayRate * days).toInt()
             OutlinedTextField(
                 value = estimatedAmount,
                 onValueChange = onAmountChange,
                 label = {
                     Text(
-                        if (selectedDates.size > 1) "કુલ અંદાજિત પેકેજ રકમ (${selectedDates.size} દિવસ) (₹)"
-                        else "અંદાજિત બજેટ / પેકેજ રકમ (₹)"
+                        if (days > 1) "Total Estimated Package ($days Days × ₹${perDayRate.toInt()}/day) / कुल राशि (₹)"
+                        else "Total Estimated Package (1 Day × ₹${perDayRate.toInt()}) / कुल राशि (₹)"
+                    )
+                },
+                leadingIcon = {
+                    Text(
+                        text = "₹",
+                        fontWeight = FontWeight.Bold,
+                        color = StatusFreeGreen,
+                        fontSize = 18.sp,
+                        modifier = Modifier.padding(start = 12.dp)
                     )
                 },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier
                     .fillMaxWidth()
                     .testTag("input_customer_amount"),
-                singleLine = true
+                singleLine = true,
+                supportingText = {
+                    Text(
+                        text = "💰 Rate: ₹${perDayRate.toInt()} / Day • $days Day(s) = ₹$calculatedTotal / प्रति दिन दर ₹${perDayRate.toInt()} के आधार पर कुल पैकेज",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = StatusFreeGreen
+                    )
+                }
             )
 
             // Venue Location
             OutlinedTextField(
                 value = venueLocation,
                 onValueChange = onLocationChange,
-                label = { Text("સ્થળ / શહેર (Venue Location)") },
+                label = { Text("Venue / City Location (स्थान / शहर)") },
                 placeholder = { Text("e.g. Shubh Banquet, Ahmedabad") },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true
@@ -812,7 +842,7 @@ private fun CustomerBookingFormCard(
             OutlinedTextField(
                 value = notesText,
                 onValueChange = onNotesChange,
-                label = { Text("ખાસ વિગત / નોંધ (Notes / Requirements)") },
+                label = { Text("Special Requirements / Notes (विशेष आवश्यकताएं)") },
                 placeholder = { Text("e.g. Drone photography required, 2 days shoot") },
                 modifier = Modifier.fillMaxWidth(),
                 maxLines = 3
@@ -839,9 +869,9 @@ private fun CustomerBookingFormCard(
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     text = if (selectedDates.size > 1) {
-                        "BOOK ${selectedDates.size} DATES / તારીખો બુક કરો 🚀"
+                        "BOOK ${selectedDates.size} DATES / तारीखें बुक करें 🚀"
                     } else {
-                        "BOOK DATE / તારીખ બુક કરો 🚀"
+                        "BOOK DATE / तारीख बुक करें 🚀"
                     },
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Bold,
@@ -902,7 +932,7 @@ private fun CustomerSuccessDialog(
                 )
 
                 Text(
-                    text = "બુકિંગ વિનંતી સફળતાપૂર્વક મોકલાઈ ગઈ છે",
+                    text = "बुकिंग अनुरोध सफलतापूर्वक भेजा गया (Request Sent)",
                     fontSize = 13.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
@@ -930,7 +960,7 @@ private fun CustomerSuccessDialog(
                 Spacer(modifier = Modifier.height(14.dp))
 
                 Text(
-                    text = "તમારી વિનંતી $studioName પાસે પહોંચી ગઈ છે. ઓનર Confirm/Done કરશે ત્યારે તારીખ કન્ફર્મ થશે.",
+                    text = "Your request has been received by $studioName. The owner will confirm shortly / आपका अनुरोध $studioName को प्राप्त हो गया है।",
                     fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onSurface,
                     textAlign = TextAlign.Center
@@ -955,7 +985,7 @@ private fun CustomerSuccessDialog(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "WhatsApp પર ઓનરને મેસેજ કરો 📲",
+                        text = "Message Studio on WhatsApp (व्हाट्सएप पर मैसेज करें) 📲",
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color.White
@@ -969,7 +999,7 @@ private fun CustomerSuccessDialog(
                     shape = RoundedCornerShape(12.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("OK / બંધ કરો", fontSize = 13.sp)
+                    Text("OK / ठीक है", fontSize = 13.sp)
                 }
             }
         }

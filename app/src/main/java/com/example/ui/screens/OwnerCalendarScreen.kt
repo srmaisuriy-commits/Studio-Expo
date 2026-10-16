@@ -48,15 +48,17 @@ fun OwnerCalendarScreen(
     monthZeroIndexed: Int,
     dateSlots: List<StudioDateSlot>,
     bookings: List<BookingRequest>,
-    selectedDate: String?,
+    selectedDates: Set<String>,
+    profile: com.example.data.model.StudioProfile? = null,
     onPreviousMonth: () -> Unit,
     onNextMonth: () -> Unit,
-    onDateSelect: (String) -> Unit,
-    onSetFreeDate: (String) -> Unit,
-    onSetBookedDate: (String) -> Unit,
-    onSetRequestDate: (String) -> Unit,
-    onClearDate: (String) -> Unit,
-    onDirectBookingDone: (date: String, customerName: String, customerPhone: String, workType: String, amount: Double) -> Unit,
+    onDateToggle: (String) -> Unit,
+    onClearAllSelectedDates: () -> Unit,
+    onSetFreeDates: (Set<String>) -> Unit,
+    onSetBookedDates: (Set<String>) -> Unit,
+    onSetRequestDates: (Set<String>) -> Unit,
+    onClearDates: (Set<String>) -> Unit,
+    onDirectBookingDone: (dates: List<String>, customerName: String, customerPhone: String, workType: String, amount: Double) -> Unit,
     onCallCustomer: (String) -> Unit,
     onWhatsAppCustomer: (String, String) -> Unit,
     onShareWhatsAppClick: () -> Unit,
@@ -64,15 +66,12 @@ fun OwnerCalendarScreen(
     onCloseDatePanel: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val selectedSlot = dateSlots.find { it.dateStr == selectedDate }
-    val bookingsOnSelectedDate = bookings.filter { it.dateStr == selectedDate }
-
     val activeFreeSlots = dateSlots
         .filter { it.status == DateStatus.FREE.name }
         .sortedBy { it.dateStr }
 
     val freeDaysSummary = if (activeFreeSlots.isEmpty()) {
-        "None"
+        "None (कोई नहीं)"
     } else {
         activeFreeSlots.joinToString(" / ") { slot ->
             val day = slot.dateStr.split("-").lastOrNull() ?: slot.dateStr
@@ -108,7 +107,7 @@ fun OwnerCalendarScreen(
                                         .size(8.dp)
                                         .clip(RoundedCornerShape(4.dp))
                                         .background(StatusFreeGreen)
-                                )
+                                    )
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text(
                                     text = "LIVE WHATSAPP FREE DATES (${activeFreeSlots.size})",
@@ -167,7 +166,7 @@ fun OwnerCalendarScreen(
 
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
-                        text = "💡 Calendarમાંથી તારીખ બદલતાં જ WhatsApp મેસેજ આપોઆપ update થાય છે.",
+                        text = "💡 Change dates on Calendar to automatically update WhatsApp message. Multi-date selection enabled / कैलेंडर में तारीख बदलते ही व्हाट्सएप संदेश अपने आप अपडेट हो जाता है।",
                         fontSize = 11.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -175,35 +174,38 @@ fun OwnerCalendarScreen(
             }
         }
 
-        // ONE UNIFIED CALENDAR
+        // ONE UNIFIED CALENDAR WITH MULTI-DATE SELECTION
         item {
             StudioCalendarView(
                 year = year,
                 monthZeroIndexed = monthZeroIndexed,
                 dateSlots = dateSlots,
                 bookings = bookings,
-                selectedDate = selectedDate,
+                selectedDate = null,
+                selectedDates = selectedDates,
                 isOwnerMode = true,
                 onPreviousMonth = onPreviousMonth,
                 onNextMonth = onNextMonth,
                 onDateClick = { isoDate, _, _ ->
-                    onDateSelect(isoDate)
+                    onDateToggle(isoDate)
                 }
             )
         }
 
-        // DIRECT DATE CONTROL ACTION PANEL (Appears whenever any date is tapped)
+        // DIRECT MULTI-DATE CONTROL ACTION PANEL
         item {
-            if (selectedDate != null) {
+            if (selectedDates.isNotEmpty()) {
                 DirectDateControlPanel(
-                    dateIso = selectedDate,
-                    slot = selectedSlot,
-                    bookings = bookingsOnSelectedDate,
+                    selectedDates = selectedDates,
                     allSlots = dateSlots,
-                    onSetFreeDate = onSetFreeDate,
-                    onSetBookedDate = onSetBookedDate,
-                    onSetRequestDate = onSetRequestDate,
-                    onClearDate = onClearDate,
+                    bookings = bookings,
+                    profile = profile,
+                    onToggleDate = onDateToggle,
+                    onClearAllSelectedDates = onClearAllSelectedDates,
+                    onSetFreeDates = onSetFreeDates,
+                    onSetBookedDates = onSetBookedDates,
+                    onSetRequestDates = onSetRequestDates,
+                    onClearDates = onClearDates,
                     onDirectBookingDone = onDirectBookingDone,
                     onCallCustomer = onCallCustomer,
                     onWhatsAppCustomer = onWhatsAppCustomer,
@@ -238,13 +240,14 @@ fun OwnerCalendarScreen(
                         Spacer(modifier = Modifier.width(14.dp))
                         Column {
                             Text(
-                                text = "👆 કોઈ પણ તારીખ પર Tap કરો",
-                                fontSize = 14.sp,
+                                text = "👆 Tap dates to select (Multi-Date Selection) / तारीखों पर टैप करें",
+                                fontSize = 13.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
+                            Spacer(modifier = Modifier.height(2.dp))
                             Text(
-                                text = "🟢 FREE • 🔴 BOOKED • 🟡 REQUEST • 🗑️ CLEAR",
+                                text = "Select one or multiple dates • 🟢 FREE • 🔴 BOOKED • 🟡 REQUEST • 🗑️ CLEAR",
                                 fontSize = 11.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )

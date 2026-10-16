@@ -21,7 +21,7 @@ import kotlinx.coroutines.launch
         StudioDateSlot::class,
         BookingRequest::class
     ],
-    version = 2,
+    version = 3,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -32,6 +32,12 @@ abstract class AppDatabase : RoomDatabase() {
         @Volatile
         private var INSTANCE: AppDatabase? = null
 
+        private val MIGRATION_2_3 = object : androidx.room.migration.Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE studio_profile ADD COLUMN perDayRate REAL NOT NULL DEFAULT 25000.0")
+            }
+        }
+
         fun getDatabase(context: Context, scope: CoroutineScope): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -39,6 +45,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "studio_expo_database"
                 )
+                    .addMigrations(MIGRATION_2_3)
                     .fallbackToDestructiveMigration(dropAllTables = false)
                     .build()
                 INSTANCE = instance
@@ -68,7 +75,8 @@ abstract class AppDatabase : RoomDatabase() {
                     ownerPin = "1234",
                     bio = "Luxury Wedding & Cinematic Photography Studio. Capturing timeless moments across Gujarat & India.",
                     cameraGearDetails = "Sony FX3 / A7 IV • DJI Drone • 4K Cinematic Video • Gimbal & Pro Lights",
-                    customWhatsAppNote = "લેટેસ્ટ સિનેમેટિક કેમેરા અને ડ્રોન કવરેજ ઉપલબ્ધ છે. તમારા શુભ પ્રસંગના શૂટ માટે સંપર્ક કરો!"
+                    customWhatsAppNote = "Latest 4K Cinematic Camera & Drone Coverage Available. Special packages available! / नवीनतम 4K सिनेमैटिक कैमरा और ड्रोन कवरेज उपलब्ध है।",
+                    perDayRate = 25000.0
                 )
             )
 
@@ -87,14 +95,14 @@ abstract class AppDatabase : RoomDatabase() {
                     status = DateStatus.FREE.name,
                     slotType = SlotType.FULL_DAY.name,
                     basePrice = 45000.0,
-                    note = "Wedding / Lagan Slot Open"
+                    note = "Wedding Ceremony Slot Open"
                 ),
                 StudioDateSlot(
                     dateStr = DateUtils.addDaysToToday(6),
                     status = DateStatus.BOOKED.name,
                     slotType = SlotType.FULL_DAY.name,
                     basePrice = 55000.0,
-                    note = "Confirmed Lagan Shoot"
+                    note = "Confirmed Wedding Shoot"
                 ),
                 StudioDateSlot(
                     dateStr = DateUtils.addDaysToToday(9),
@@ -132,9 +140,9 @@ abstract class AppDatabase : RoomDatabase() {
                 dateStr = DateUtils.addDaysToToday(4),
                 customerName = "Bhavin Shah",
                 customerPhone = "9825012345",
-                workType = "Wedding / Lagan (લગ્ન)",
+                workType = "Wedding Ceremony (शादी / विवाह)",
                 amount = 45000.0,
-                location = "Shubh Banquet, SG Highway, Ahmedabad",
+                location = "Shubh Banquet, SG Highway",
                 notes = "Morning Muhurat & Evening Reception. Drone required.",
                 status = BookingStatus.PENDING.name,
                 isSubmittedByCurrentCustomer = false
@@ -145,7 +153,7 @@ abstract class AppDatabase : RoomDatabase() {
                 dateStr = DateUtils.addDaysToToday(6),
                 customerName = "Pooja Patel",
                 customerPhone = "9898056789",
-                workType = "Pre-Wedding Shoot (પ્રી-વેડિંગ)",
+                workType = "Pre-Wedding Shoot (प्री-वेडिंग शूट)",
                 amount = 55000.0,
                 location = "Polo Forest & Heritage City",
                 notes = "2 Days Shoot with Traditional Attire",

@@ -71,7 +71,7 @@ fun ShareWhatsAppDialog(
         mutableStateOf(profile?.cameraGearDetails ?: "Sony FX3 / A7 IV • DJI Drone • 4K Cinematic Video • Gimbal & Pro Lights")
     }
     var customNote by remember(profile) {
-        mutableStateOf(profile?.customWhatsAppNote ?: "લેટેસ્ટ સિનેમેટિક કેમેરા અને ડ્રોન કવરેજ ઉપલબ્ધ છે. તમારા શુભ પ્રસંગના શૂટ માટે સંપર્ક કરો!")
+        mutableStateOf(profile?.customWhatsAppNote ?: "Latest 4K Cinematic Camera & Drone Coverage Available / नवीनतम 4K सिनेमैटिक कैमरा और ड्रोन कवरेज उपलब्ध है।")
     }
 
     var isEditSectionExpanded by remember { mutableStateOf(false) }
@@ -180,7 +180,7 @@ fun ShareWhatsAppDialog(
                         OutlinedTextField(
                             value = cameraGear,
                             onValueChange = { cameraGear = it },
-                            label = { Text("Camera & Gear Details (કેમેરા સાધનોની વિગત)") },
+                            label = { Text("Camera & Gear Details (कैमरा उपकरण विवरण)") },
                             placeholder = { Text("e.g. Sony FX3, A7 IV, DJI Drone, 4K Video, Lights") },
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -191,8 +191,8 @@ fun ShareWhatsAppDialog(
                         OutlinedTextField(
                             value = customNote,
                             onValueChange = { customNote = it },
-                            label = { Text("Special Offer / Message Note (ખાસ નોંધ / ઓફર)") },
-                            placeholder = { Text("e.g. ખાસ ડિસ્કાઉન્ટ ઉપલબ્ધ છે!") },
+                            label = { Text("Special Offer / Message Note (विशेष नोट / ऑफ़र)") },
+                            placeholder = { Text("e.g. Special discounts available!") },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .testTag("input_custom_note"),
@@ -202,7 +202,7 @@ fun ShareWhatsAppDialog(
                         Button(
                             onClick = {
                                 onSaveCameraDetails(cameraGear, customNote)
-                                Toast.makeText(context, "કેમેરા વિગતો સેવ થઈ ગઈ! (Saved)", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, "Camera details saved! / विवरण सहेजा गया!", Toast.LENGTH_SHORT).show()
                                 isEditSectionExpanded = false
                             },
                             shape = RoundedCornerShape(10.dp),
@@ -212,7 +212,7 @@ fun ShareWhatsAppDialog(
                             Icon(imageVector = Icons.Default.Save, contentDescription = null, tint = Color.Black, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
-                                text = "Save to Studio Profile (સેવ કરો)",
+                                text = "Save to Studio Profile / प्रोफ़ाइल में सहेजें",
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = Color.Black
@@ -225,7 +225,7 @@ fun ShareWhatsAppDialog(
 
                 // WhatsApp Message Live Preview Box
                 Text(
-                    text = "Message Preview (આ મેસેજ મોકલાશે):",
+                    text = "Message Preview / संदेश पूर्वावलोकन:",
                     fontSize = 11.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -261,7 +261,7 @@ fun ShareWhatsAppDialog(
                             val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                             val clip = ClipData.newPlainText("Studio Expo Message", currentFormattedMessage)
                             clipboard.setPrimaryClip(clip)
-                            Toast.makeText(context, "મેસેજ કોપી થયો! (Copied)", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, "Message Copied! / संदेश कॉपी हो गया!", Toast.LENGTH_SHORT).show()
                         },
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.weight(1f)

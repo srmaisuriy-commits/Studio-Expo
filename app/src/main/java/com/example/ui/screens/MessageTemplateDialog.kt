@@ -71,13 +71,13 @@ fun MessageTemplateDialog(
         mutableStateOf(profile?.cameraGearDetails ?: "Sony FX3 / A7 IV • DJI Drone • 4K Cinematic Video • Gimbal & Pro Lights")
     }
     var greetingText by remember(profile) {
-        mutableStateOf(profile?.customHeaderGreeting ?: "નમસ્તે! આગામી ઇવેન્ટ્સ અને લગ્ન સીઝન માટે અમારી ઉપલબ્ધ (FREE) તારીખો નીચે મુજબ છે:")
+        mutableStateOf(profile?.customHeaderGreeting ?: "Hello! Here are our available (FREE) dates for upcoming shoots / नमस्ते! आगामी शूटिंग और इवेंट्स के लिए हमारी उपलब्ध (FREE) तारीखें:")
     }
     var customNote by remember(profile) {
-        mutableStateOf(profile?.customWhatsAppNote ?: "લેટેસ્ટ સિનેમેટિક કેમેરા અને ડ્રોન કવરેજ ઉપલબ્ધ છે. તમારા શુભ પ્રસંગના શૂટ માટે સંપર્ક કરો!")
+        mutableStateOf(profile?.customWhatsAppNote ?: "Latest 4K Cinematic Camera & Drone Coverage Available / नवीनतम 4K सिनेमैटिक कैमरा और ड्रोन कवरेज उपलब्ध है।")
     }
     var footerText by remember(profile) {
-        mutableStateOf(profile?.customFooterNote ?: "તમારી સ્પેશ્યલ ડેટ સમયસર રિઝર્વ કરાવો! વધુ વિગત માટે WhatsApp પર સંપર્ક કરો.")
+        mutableStateOf(profile?.customFooterNote ?: "Reserve your date early! Contact us on WhatsApp for bookings / अपनी तारीख जल्दी बुक करें! बुकिंग के लिए व्हाट्सएप पर संपर्क करें।")
     }
 
     // Live preview string dynamically recomputes as user edits
@@ -115,7 +115,7 @@ fun MessageTemplateDialog(
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
-                            text = "આખો મેસેજ સેટ કરો (તારીખો આપોઆપ સેટ થશે)",
+                            text = "Set message template (Dates sync automatically) / पूरा संदेश सेट करें",
                             fontSize = 11.sp,
                             color = StudioAmber
                         )
@@ -160,7 +160,7 @@ fun MessageTemplateDialog(
                         OutlinedTextField(
                             value = cameraGear,
                             onValueChange = { cameraGear = it },
-                            label = { Text("🎥 Camera Details (કેમેરા અને સાધનોની વિગત)") },
+                            label = { Text("🎥 Camera Details (कैमरा और उपकरण विवरण)") },
                             placeholder = { Text("Sony FX3, A7 IV, DJI Drone, 4K, Lights") },
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -172,7 +172,7 @@ fun MessageTemplateDialog(
                         OutlinedTextField(
                             value = greetingText,
                             onValueChange = { greetingText = it },
-                            label = { Text("✨ Greeting (શરૂઆતનો મેસેજ)") },
+                            label = { Text("✨ Greeting (शुरुआती संदेश)") },
                             modifier = Modifier.fillMaxWidth(),
                             maxLines = 2
                         )
@@ -181,7 +181,7 @@ fun MessageTemplateDialog(
                         OutlinedTextField(
                             value = customNote,
                             onValueChange = { customNote = it },
-                            label = { Text("💬 Offers / Special Note (ખાસ નોંધ / ઓફર્સ)") },
+                            label = { Text("💬 Offers / Special Note (विशेष नोट / ऑफ़र)") },
                             modifier = Modifier.fillMaxWidth(),
                             maxLines = 2
                         )
@@ -195,7 +195,7 @@ fun MessageTemplateDialog(
                                 .padding(10.dp)
                         ) {
                             Text(
-                                text = "📅 [FREE DATES]: કેલેન્ડરની તમામ current 🟢 Free Dates આ જગ્યાએ આપોઆપ લિસ્ટ થઈ જશે!",
+                                text = "📅 [FREE DATES]: All active 🟢 Free Dates will be automatically listed here! / कैलेंडर की सभी 🟢 उपलब्ध तारीखें यहाँ अपने आप जुड़ेंगी!",
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 color = StatusFreeGreen
@@ -206,7 +206,7 @@ fun MessageTemplateDialog(
                         OutlinedTextField(
                             value = footerText,
                             onValueChange = { footerText = it },
-                            label = { Text("📝 Footer Note (નીચેની વિગત)") },
+                            label = { Text("📝 Footer Note (निचला नोट / विवरण)") },
                             modifier = Modifier.fillMaxWidth(),
                             maxLines = 2
                         )
@@ -242,7 +242,7 @@ fun MessageTemplateDialog(
                     Button(
                         onClick = {
                             onSaveTemplate(cameraGear, customNote, greetingText, footerText)
-                            Toast.makeText(context, "મેસેજ ટેમ્પલેટ સેવ થઈ ગયું! (Saved)", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, "Template saved! / संदेश टेम्पलेट सहेजा गया!", Toast.LENGTH_SHORT).show()
                             onDismiss()
                         },
                         shape = RoundedCornerShape(12.dp),

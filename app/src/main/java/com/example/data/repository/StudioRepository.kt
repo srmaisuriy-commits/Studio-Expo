@@ -120,16 +120,16 @@ class StudioRepository(private val studioDao: StudioDao) {
         val photographer = profile?.photographerName ?: "Photographer"
         val phone = profile?.whatsapp ?: profile?.phone ?: ""
         val cameraGear = customCameraGear ?: profile?.cameraGearDetails ?: "Sony FX3 / A7 IV • DJI Drone • 4K Cinematic Setup"
-        val note = customNote ?: profile?.customWhatsAppNote ?: "લેટેસ્ટ સિનેમેટિક કેમેરા અને ડ્રોન કવરેજ ઉપલબ્ધ છે."
-        val greeting = customGreeting ?: profile?.customHeaderGreeting ?: "નમસ્તે! આગામી ઇવેન્ટ્સ અને લગ્ન સીઝન માટે અમારી ઉપલબ્ધ (FREE) તારીખો નીચે મુજબ છે:"
-        val footer = customFooter ?: profile?.customFooterNote ?: "તમારી સ્પેશ્યલ ડેટ સમયસર રિઝર્વ કરાવો! વધુ વિગત માટે સંપર્ક કરો."
+        val note = customNote ?: profile?.customWhatsAppNote ?: "Latest 4K Cinematic Camera & Drone Coverage Available."
+        val greeting = customGreeting ?: profile?.customHeaderGreeting ?: "Hello! Here are our available (FREE) dates for upcoming events / नमस्ते! आगामी इवेंट्स के लिए हमारी उपलब्ध (FREE) तारीखें:"
+        val footer = customFooter ?: profile?.customFooterNote ?: "Book your special date in advance! Contact us on WhatsApp for bookings & details."
 
         val sortedFreeSlots = dateSlots
             .filter { it.status == DateStatus.FREE.name }
             .sortedBy { it.dateStr }
 
         val datesText = if (sortedFreeSlots.isEmpty()) {
-            "• હાલમાં કોઈ તારીખ ઉપલબ્ધ નથી. નવી તારીખો માટે સંપર્ક કરો."
+            "• Currently no dates available. Contact us for custom bookings / वर्तमान में कोई तारीख उपलब्ध नहीं है।"
         } else {
             sortedFreeSlots.joinToString("\n") { slot ->
                 val displayDate = DateUtils.formatForDisplay(slot.dateStr)
@@ -153,7 +153,7 @@ class StudioRepository(private val studioDao: StudioDao) {
         } else ""
 
         val noteBlock = if (note.isNotBlank()) {
-            "\n✨ *Note / સુવિધા:*\n$note\n"
+            "\n✨ *Note / विशेष नोट:*\n$note\n"
         } else ""
 
         val greetingBlock = if (greeting.isNotBlank()) {
@@ -163,17 +163,17 @@ class StudioRepository(private val studioDao: StudioDao) {
         return """
 📸 *${studioName.uppercase()}* 
 ✨ *Photographer: $photographer*
-📍 ${profile?.city ?: "Gujarat"}
+📍 ${profile?.city ?: "India"}
 $gearBlock$noteBlock$greetingBlock
-📅 *FREE DATES / ઉપલબ્ધ તારીખો:*
+📅 *FREE DATES / उपलब्ध तारीखें:*
 $datesText
 
 🗓️ *Quick Summary:* $shortDatesSummary
 
-🔗 *ઓનલાઇન તારીખ બુક કરવા લિંક (Booking Link):*
+🔗 *Online Booking Link (ऑनलाइन बुकिंग लिंक):*
 https://studioexpo.app/book/${phone.ifBlank { "studio" }}
 
-📞 *સંપર્ક / WhatsApp:* +91 $phone
+📞 *Contact / WhatsApp (संपर्क):* +91 $phone
 
 _${footer}_
         """.trimIndent()

@@ -61,6 +61,7 @@ fun MainScreen(
     val calendarYear by viewModel.calendarYear.collectAsStateWithLifecycle()
     val calendarMonth by viewModel.calendarMonth.collectAsStateWithLifecycle()
     val selectedDate by viewModel.selectedDate.collectAsStateWithLifecycle()
+    val ownerSelectedDates by viewModel.ownerSelectedDates.collectAsStateWithLifecycle()
 
     val showAddDateDialog by viewModel.showAddDateDialog.collectAsStateWithLifecycle()
     val showShareDialog by viewModel.showShareDialog.collectAsStateWithLifecycle()
@@ -76,23 +77,25 @@ fun MainScreen(
     Scaffold(
         modifier = modifier.fillMaxSize(),
         topBar = {
-            StudioTopBar(
-                currentRole = currentRole,
-                studioName = profile?.studioName ?: "Studio Expo",
-                onRoleSelected = { role ->
-                    if (role == AppRole.CUSTOMER) {
-                        viewModel.switchToCustomerView()
-                    } else {
-                        viewModel.switchToOwnerView()
+            if (currentRole == AppRole.CUSTOMER || isOwnerAuthenticated) {
+                StudioTopBar(
+                    currentRole = currentRole,
+                    studioName = profile?.studioName ?: "Studio Expo",
+                    onRoleSelected = { role ->
+                        if (role == AppRole.CUSTOMER) {
+                            viewModel.switchToCustomerView()
+                        } else {
+                            viewModel.switchToOwnerView()
+                        }
+                    },
+                    onShareClick = {
+                        viewModel.openShareDialog()
+                    },
+                    onMessageTemplateClick = {
+                        viewModel.openMessageTemplateDialog()
                     }
-                },
-                onShareClick = {
-                    viewModel.openShareDialog()
-                },
-                onMessageTemplateClick = {
-                    viewModel.openMessageTemplateDialog()
-                }
-            )
+                )
+            }
         },
         bottomBar = {
             if (currentRole == AppRole.OWNER && isOwnerAuthenticated) {
@@ -118,6 +121,10 @@ fun MainScreen(
                             photographerName = profile?.photographerName ?: "Rajesh Maisuriya",
                             pinError = ownerPinError,
                             onPinEntered = { pin -> viewModel.verifyOwnerPin(pin) },
+                            onEmailLogin = { email, pass -> viewModel.loginWithEmail(email, pass) },
+                            onEmailSignUp = { email, pass -> viewModel.signUpWithEmail(email, pass) },
+                            onGoogleLogin = { idToken -> viewModel.loginWithGoogleCredential(idToken) },
+                            onDirectLogin = { user -> viewModel.authenticateDirectly(user) },
                             onSwitchToCustomer = { viewModel.switchToCustomerView() }
                         )
                     } else {
@@ -143,16 +150,18 @@ fun MainScreen(
                                     monthZeroIndexed = calendarMonth,
                                     dateSlots = dateSlots,
                                     bookings = allBookings,
-                                    selectedDate = selectedDate,
+                                    selectedDates = ownerSelectedDates,
+                                    profile = profile,
                                     onPreviousMonth = { viewModel.previousMonth() },
                                     onNextMonth = { viewModel.nextMonth() },
-                                    onDateSelect = { viewModel.selectDate(it) },
-                                    onSetFreeDate = { viewModel.setDirectDateStatus(it, DateStatus.FREE) },
-                                    onSetBookedDate = { viewModel.setDirectDateStatus(it, DateStatus.BOOKED) },
-                                    onSetRequestDate = { viewModel.setDirectDateStatus(it, DateStatus.REQUEST) },
-                                    onClearDate = { viewModel.clearDateStatus(it) },
-                                    onDirectBookingDone = { date, name, phone, workType, amount ->
-                                        viewModel.createDirectBooking(date, name, phone, workType, amount)
+                                    onDateToggle = { viewModel.toggleOwnerSelectedDate(it) },
+                                    onClearAllSelectedDates = { viewModel.clearOwnerSelectedDates() },
+                                    onSetFreeDates = { viewModel.setMultipleDatesStatus(it, DateStatus.FREE) },
+                                    onSetBookedDates = { viewModel.setMultipleDatesStatus(it, DateStatus.BOOKED) },
+                                    onSetRequestDates = { viewModel.setMultipleDatesStatus(it, DateStatus.REQUEST) },
+                                    onClearDates = { viewModel.clearMultipleDatesStatus(it) },
+                                    onDirectBookingDone = { dates, name, phone, workType, amount ->
+                                        viewModel.createDirectBookingForMultipleDates(dates, name, phone, workType, amount)
                                     },
                                     onCallCustomer = { phone -> viewModel.callCustomer(context, phone) },
                                     onWhatsAppCustomer = { phone, msg ->
@@ -160,7 +169,7 @@ fun MainScreen(
                                     },
                                     onShareWhatsAppClick = { viewModel.openShareDialog() },
                                     onSetMessageTemplateClick = { viewModel.openMessageTemplateDialog() },
-                                    onCloseDatePanel = { viewModel.clearSelectedDate() }
+                                    onCloseDatePanel = { viewModel.clearOwnerSelectedDates() }
                                 )
                             }
                             OwnerScreen.REQUESTS -> {

@@ -112,7 +112,7 @@ fun StudioTopBar(
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.EditNote,
-                                    contentDescription = "Set WhatsApp Message Template (મેસેજ સેટ કરો)",
+                                    contentDescription = "Set WhatsApp Message Template (मैसेज टेम्पलेट सेट करें)",
                                     tint = StudioAmber,
                                     modifier = Modifier.size(24.dp)
                                 )
@@ -126,7 +126,7 @@ fun StudioTopBar(
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Share,
-                                    contentDescription = "Share WhatsApp",
+                                    contentDescription = "Share on WhatsApp (व्हाट्सएप शेयर)",
                                     tint = StatusFreeGreen,
                                     modifier = Modifier.size(20.dp)
                                 )
@@ -148,8 +148,8 @@ fun StudioTopBar(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 RoleToggleButton(
-                    title = "👤 Owner Mode",
-                    subtitle = "Manage & Confirm",
+                    title = "👤 Owner (मालिक)",
+                    subtitle = "Manage & Bookings",
                     isSelected = currentRole == AppRole.OWNER,
                     icon = Icons.Default.Lock,
                     onClick = { onRoleSelected(AppRole.OWNER) },
@@ -161,8 +161,8 @@ fun StudioTopBar(
                 Spacer(modifier = Modifier.width(4.dp))
 
                 RoleToggleButton(
-                    title = "👥 Customer View",
-                    subtitle = "Public Link Flow",
+                    title = "👥 Customer (ग्राहक)",
+                    subtitle = "Public Booking Flow",
                     isSelected = currentRole == AppRole.CUSTOMER,
                     icon = Icons.Default.Person,
                     onClick = { onRoleSelected(AppRole.CUSTOMER) },

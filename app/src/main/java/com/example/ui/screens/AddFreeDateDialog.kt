@@ -81,13 +81,13 @@ fun AddFreeDateDialog(
                 ) {
                     Column {
                         Text(
-                            text = "➕ Add Free Date (તારીખ ઉમેરો)",
+                            text = "➕ Add Free Date (उपलब्ध तारीख जोड़ें)",
                             fontSize = 17.sp,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
-                            text = "આ તારીખ ગ્રાહકો માટે 🟢 Available દેખાશે",
+                            text = "This date will appear as 🟢 Available to customers / यह तारीख उपलब्ध दिखेगी",
                             fontSize = 11.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -103,7 +103,7 @@ fun AddFreeDateDialog(
                 OutlinedTextField(
                     value = dateIso,
                     onValueChange = { dateIso = it },
-                    label = { Text("Date (YYYY-MM-DD)") },
+                    label = { Text("Date (तारीख) YYYY-MM-DD") },
                     leadingIcon = {
                         Icon(
                             imageVector = Icons.Default.CalendarToday,
@@ -122,7 +122,7 @@ fun AddFreeDateDialog(
 
                 // Slot Type chips
                 Text(
-                    text = "Shoot Type / સ્લોટ:",
+                    text = "Shoot Type / स्लॉट का प्रकार:",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface
@@ -147,8 +147,8 @@ fun AddFreeDateDialog(
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = type.title.split(" ")[0],
-                                fontSize = 11.sp,
+                                text = "${type.title.split(" ")[0]} (${type.hindiTitle.split(" ")[0]})",
+                                fontSize = 10.sp,
                                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
                                 color = if (isSelected) Color.Black else MaterialTheme.colorScheme.onSurface
                             )
@@ -162,7 +162,7 @@ fun AddFreeDateDialog(
                 OutlinedTextField(
                     value = amountText,
                     onValueChange = { amountText = it },
-                    label = { Text("Expected Package / Rate (₹)") },
+                    label = { Text("Expected Package / Rate / पैकेज राशि (₹)") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true
@@ -174,7 +174,7 @@ fun AddFreeDateDialog(
                 OutlinedTextField(
                     value = noteText,
                     onValueChange = { noteText = it },
-                    label = { Text("Note / વિગત (Optional)") },
+                    label = { Text("Note / विवरण (Optional)") },
                     placeholder = { Text("e.g. Wedding, Destination, Pre-wedding open") },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true
@@ -195,7 +195,7 @@ fun AddFreeDateDialog(
                         .testTag("save_free_date_btn")
                 ) {
                     Text(
-                        text = "Mark as FREE 🟢 (તારીખ સેવ કરો)",
+                        text = "Mark as FREE 🟢 (सहेजें)",
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color.White

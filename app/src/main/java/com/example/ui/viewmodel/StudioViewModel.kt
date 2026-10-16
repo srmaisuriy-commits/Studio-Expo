@@ -124,10 +124,15 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
         initialValue = emptyList()
     )
 
+    // Multi-date selection state for Owner Calendar
+    private val _ownerSelectedDates = MutableStateFlow<Set<String>>(emptySet())
+    val ownerSelectedDates: StateFlow<Set<String>> = _ownerSelectedDates.asStateFlow()
+
     // Role switching
     fun switchToCustomerView() {
         _currentRole.value = AppRole.CUSTOMER
         _selectedDate.value = null
+        _ownerSelectedDates.value = emptySet()
     }
 
     fun switchToOwnerView() {
@@ -135,7 +140,7 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
         _selectedDate.value = null
     }
 
-    // Owner Login Verification
+    // Owner Login Verification (PIN)
     fun verifyOwnerPin(enteredPin: String) {
         val currentProfile = profile.value
         val correctPin = currentProfile?.ownerPin ?: "1234"
@@ -143,11 +148,87 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
             _isOwnerAuthenticated.value = true
             _pinError.value = null
         } else {
-            _pinError.value = "ખોટો PIN! સાચો PIN દાખલ કરો (ડિફોલ્ટ: 1234)"
+            _pinError.value = "Incorrect PIN! Enter valid 4-digit PIN (Default: 1234) / गलत पिन! सही पिन दर्ज करें"
         }
     }
 
+    // Firebase Email / Password Login
+    fun loginWithEmail(email: String, pass: String) {
+        if (email.isBlank() || pass.isBlank()) {
+            _pinError.value = "Please enter email and password / कृपया ईमेल और पासवर्ड दर्ज करें"
+            return
+        }
+        viewModelScope.launch {
+            try {
+                com.example.data.firebase.FirebaseConfig.auth.signInWithEmailAndPassword(email.trim(), pass)
+                    .addOnSuccessListener { userCredential ->
+                        _isOwnerAuthenticated.value = true
+                        _pinError.value = null
+                        showToast("Welcome ${userCredential.user?.displayName ?: userCredential.user?.email}")
+                    }
+                    .addOnFailureListener { exception ->
+                        _pinError.value = exception.localizedMessage ?: "Login failed"
+                    }
+            } catch (e: Exception) {
+                _pinError.value = e.localizedMessage ?: "Login error"
+            }
+        }
+    }
+
+    // Firebase Email / Password Sign Up
+    fun signUpWithEmail(email: String, pass: String) {
+        if (email.isBlank() || pass.isBlank() || pass.length < 6) {
+            _pinError.value = "Password must be at least 6 characters / पासवर्ड कम से कम 6 अक्षरों का होना चाहिए"
+            return
+        }
+        viewModelScope.launch {
+            try {
+                com.example.data.firebase.FirebaseConfig.auth.createUserWithEmailAndPassword(email.trim(), pass)
+                    .addOnSuccessListener { userCredential ->
+                        _isOwnerAuthenticated.value = true
+                        _pinError.value = null
+                        showToast("Account created! Logged in as ${userCredential.user?.email}")
+                    }
+                    .addOnFailureListener { exception ->
+                        _pinError.value = exception.localizedMessage ?: "Sign up failed"
+                    }
+            } catch (e: Exception) {
+                _pinError.value = e.localizedMessage ?: "Sign up error"
+            }
+        }
+    }
+
+    // Firebase Google Sign In
+    fun loginWithGoogleCredential(idToken: String) {
+        viewModelScope.launch {
+            try {
+                val credential = com.google.firebase.auth.GoogleAuthProvider.getCredential(idToken, null)
+                com.example.data.firebase.FirebaseConfig.auth.signInWithCredential(credential)
+                    .addOnSuccessListener { userCredential ->
+                        _isOwnerAuthenticated.value = true
+                        _pinError.value = null
+                        showToast("Welcome ${userCredential.user?.displayName ?: userCredential.user?.email}")
+                    }
+                    .addOnFailureListener { exception ->
+                        _pinError.value = exception.localizedMessage ?: "Google Sign-In failed"
+                    }
+            } catch (e: Exception) {
+                _pinError.value = e.localizedMessage ?: "Google sign-in error"
+            }
+        }
+    }
+
+    // Direct Login (For offline or simulated Google session)
+    fun authenticateDirectly(userIdentifier: String) {
+        _isOwnerAuthenticated.value = true
+        _pinError.value = null
+        showToast("Logged in as $userIdentifier")
+    }
+
     fun logoutOwner() {
+        try {
+            com.example.data.firebase.FirebaseConfig.auth.signOut()
+        } catch (_: Exception) {}
         _isOwnerAuthenticated.value = false
         _pinError.value = null
     }
@@ -181,12 +262,30 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
 
     fun clearSelectedDate() {
         _selectedDate.value = null
+        _ownerSelectedDates.value = emptySet()
+    }
+
+    fun toggleOwnerSelectedDate(dateIso: String) {
+        val current = _ownerSelectedDates.value.toMutableSet()
+        if (current.contains(dateIso)) {
+            current.remove(dateIso)
+        } else {
+            current.add(dateIso)
+        }
+        _ownerSelectedDates.value = current
+        _selectedDate.value = current.lastOrNull()
+    }
+
+    fun clearOwnerSelectedDates() {
+        _ownerSelectedDates.value = emptySet()
+        _selectedDate.value = null
     }
 
     // Dialog controls
     fun openAddDateDialog(dateIso: String? = null) {
         if (dateIso != null) {
             _selectedDate.value = dateIso
+            _ownerSelectedDates.value = setOf(dateIso)
         }
         _showAddDateDialog.value = true
     }
@@ -198,6 +297,7 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
     fun openDirectBookingDialog(dateIso: String? = null) {
         if (dateIso != null) {
             _selectedDate.value = dateIso
+            _ownerSelectedDates.value = setOf(dateIso)
         }
         _showDirectBookingDialog.value = true
     }
@@ -235,39 +335,44 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     // ==========================================
-    // CALENDAR DIRECT DATE CONTROL
+    // CALENDAR MULTI-DATE CONTROL
     // ==========================================
 
-    /**
-     * Directly set date status to FREE 🟢 or BOOKED 🔴
-     * - SET FREE: Calendar turns GREEN, WhatsApp automatically adds date, Booking link shows date available.
-     * - SET BOOKED: Calendar turns RED, WhatsApp automatically removes date, Customer booking disabled.
-     */
     fun setDirectDateStatus(dateIso: String, status: DateStatus) {
+        setMultipleDatesStatus(setOf(dateIso), status)
+    }
+
+    fun setMultipleDatesStatus(dates: Set<String>, status: DateStatus) {
+        if (dates.isEmpty()) return
         viewModelScope.launch {
-            repository.setDirectDateStatus(dateIso, status)
-            val displayDate = DateUtils.formatForDisplay(dateIso)
-            when (status) {
-                DateStatus.FREE -> showToast("🟢 $displayDate: SET FREE DATE! Calendar & WhatsApp Updated")
-                DateStatus.BOOKED -> showToast("🔴 $displayDate: SET BOOKED DATE! Calendar & WhatsApp Updated")
-                DateStatus.REQUEST -> showToast("🟡 $displayDate: SET REQUEST DATE (વિનંતી)!")
+            dates.forEach { dateIso ->
+                repository.setDirectDateStatus(dateIso, status)
             }
+            val count = dates.size
+            when (status) {
+                DateStatus.FREE -> showToast("🟢 $count Date(s) marked FREE (Calendar & WhatsApp updated) / $count तारीखें उपलब्ध सेट की गईं")
+                DateStatus.BOOKED -> showToast("🔴 $count Date(s) marked BOOKED (Calendar & WhatsApp updated) / $count तारीखें बुक सेट की गईं")
+                DateStatus.REQUEST -> showToast("🟡 $count Date(s) marked REQUEST / $count तारीखें अनुरोध सेट की गईं")
+            }
+            clearOwnerSelectedDates()
         }
     }
 
     fun clearDateStatus(dateIso: String) {
+        clearMultipleDatesStatus(setOf(dateIso))
+    }
+
+    fun clearMultipleDatesStatus(dates: Set<String>) {
+        if (dates.isEmpty()) return
         viewModelScope.launch {
-            repository.deleteDateSlot(dateIso)
-            val displayDate = DateUtils.formatForDisplay(dateIso)
-            showToast("⚪ $displayDate: તારીખ ખાલી કરી / CLEAR DATE!")
+            dates.forEach { dateIso ->
+                repository.deleteDateSlot(dateIso)
+            }
+            showToast("⚪ ${dates.size} Date(s) cleared (Reset) / ${dates.size} तारीखें खाली (रीसेट) की गईं")
+            clearOwnerSelectedDates()
         }
     }
 
-    /**
-     * Direct Booking by Owner on a date:
-     * FREE 🟢 -> BOOKED 🔴 with customer details.
-     * Calendar date turns RED and WhatsApp automatically removes date.
-     */
     fun createDirectBooking(
         dateIso: String,
         customerName: String,
@@ -275,29 +380,53 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
         workType: String,
         amount: Double
     ) {
+        createDirectBookingForMultipleDates(
+            dates = listOf(dateIso),
+            customerName = customerName,
+            customerPhone = customerPhone,
+            workType = workType,
+            amount = amount
+        )
+    }
+
+    fun createDirectBookingForMultipleDates(
+        dates: List<String>,
+        customerName: String,
+        customerPhone: String,
+        workType: String,
+        amount: Double
+    ) {
         if (customerName.isBlank()) {
-            showToast("ગ્રાહકનું નામ દાખલ કરો")
+            showToast("Please enter customer name / कृपया ग्राहक का नाम दर्ज करें")
+            return
+        }
+        if (dates.isEmpty()) {
+            showToast("Please select at least one date / कम से कम एक तारीख चुनें")
             return
         }
 
         viewModelScope.launch {
-            repository.createDirectBooking(
-                dateStr = dateIso,
-                customerName = customerName,
-                customerPhone = customerPhone,
-                workType = workType,
-                amount = amount
-            )
+            val isMulti = dates.size > 1
+            val perDateAmount = if (isMulti) amount / dates.size else amount
+            dates.forEach { dateIso ->
+                repository.createDirectBooking(
+                    dateStr = dateIso,
+                    customerName = customerName,
+                    customerPhone = customerPhone,
+                    workType = workType,
+                    amount = perDateAmount
+                )
+            }
             closeDirectBookingDialog()
-            val displayDate = DateUtils.formatForDisplay(dateIso)
-            showToast("✅ $displayDate: બુકિંગ સેવ થયું! તારીખ 🔴 BOOKED થઈ ગઈ.")
+            clearOwnerSelectedDates()
+            showToast("✅ Booking confirmed for ${dates.size} date(s) (BOOKED) / ${dates.size} तारीखों की बुकिंग सुरक्षित हो गई!")
         }
     }
 
     fun deleteFreeDate(dateIso: String) {
         viewModelScope.launch {
             repository.deleteDateSlot(dateIso)
-            showToast("તારીખ કાઢી નાખવામાં આવી")
+            showToast("Date removed / तारीख हटा दी गई")
         }
     }
 
@@ -305,7 +434,7 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
         viewModelScope.launch {
             repository.confirmBooking(booking.id, booking.dateStr)
             closeBookingDetail()
-            showToast("બુકિંગ કન્ફર્મ થઈ ગયું! તારીખ 🔴 BOOKED થઈ ગઈ છે.")
+            showToast("Booking Confirmed! Date marked BOOKED 🔴 / बुकिंग कन्फर्म हो गई!")
         }
     }
 
@@ -313,14 +442,14 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
         viewModelScope.launch {
             repository.rejectBooking(booking.id, booking.dateStr)
             closeBookingDetail()
-            showToast("બુકિંગ વિનંતી રદ (Reject) કરવામાં આવી")
+            showToast("Booking Request Rejected / बुकिंग अनुरोध अस्वीकृत किया गया")
         }
     }
 
     fun updateProfile(newProfile: StudioProfile) {
         viewModelScope.launch {
             repository.updateProfile(newProfile)
-            showToast("પ્રોફાઇલ અપડેટ થઈ ગઈ!")
+            showToast("Profile Updated! / प्रोफ़ाइल अपडेट हो गई!")
         }
     }
 
@@ -335,11 +464,11 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
         notes: String
     ) {
         if (name.isBlank() || phone.isBlank()) {
-            showToast("કૃપા કરીને નામ અને મોબાઇલ નંબર દાખલ કરો")
+            showToast("Please enter name and phone number / कृपया नाम और फ़ोन नंबर दर्ज करें")
             return
         }
         if (dates.isEmpty()) {
-            showToast("કૃપા કરીને ઓછામાં ઓછી એક તારીખ પસંદ કરો")
+            showToast("Please select at least one date / कृपया कम से कम एक तारीख चुनें")
             return
         }
 
@@ -422,7 +551,7 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
                 customFooterNote = footer.trim()
             )
             repository.updateProfile(updated)
-            showToast("મેસેજ ટેમ્પલેટ સેવ થઈ ગયું! (Template Saved)")
+            showToast("Message Template Saved! / संदेश टेम्पलेट सहेजा गया!")
         }
     }
 

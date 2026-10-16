@@ -15,7 +15,8 @@ data class StudioProfile(
     val bio: String = "Professional Wedding, Pre-Wedding & Cinematic Fashion Photography",
     val instagramHandle: String = "@studioexpo.official",
     val cameraGearDetails: String = "Sony FX3 / A7 IV • DJI Drone • 4K Cinematic Video • Gimbal & Pro Lights",
-    val customWhatsAppNote: String = "લેટેસ્ટ સિનેમેટિક કેમેરા અને ડ્રોન કવરેજ ઉપલબ્ધ છે. સ્પેશિયલ પેકેજ માટે સંપર્ક કરો!",
-    val customHeaderGreeting: String = "નમસ્તે! આગામી ઇવેન્ટ્સ અને લગ્ન સીઝન માટે અમારી ઉપલબ્ધ (FREE) તારીખો નીચે મુજબ છે:",
-    val customFooterNote: String = "તમારી સ્પેશ્યલ ડેટ સમયસર રિઝર્વ કરાવો! વધુ વિગત માટે WhatsApp પર સંપર્ક કરો."
+    val customWhatsAppNote: String = "Latest 4K Cinematic Camera & Drone Coverage Available. Special packages available! / नवीनतम 4K सिनेमैटिक कैमरा और ड्रोन कवरेज उपलब्ध है।",
+    val customHeaderGreeting: String = "Hello! Here are our available (FREE) dates for upcoming wedding & events / नमस्ते! आगामी शादी और इवेंट्स के लिए हमारी उपलब्ध (FREE) तारीखें:",
+    val customFooterNote: String = "Reserve your special date today! Contact us on WhatsApp for bookings & details / अपनी तारीख आज ही बुक करें!",
+    val perDayRate: Double = 25000.0
 )

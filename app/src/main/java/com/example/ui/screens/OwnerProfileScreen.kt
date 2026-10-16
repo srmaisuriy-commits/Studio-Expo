@@ -63,7 +63,8 @@ fun OwnerProfileScreen(
     var pin by remember(profile) { mutableStateOf(profile?.ownerPin ?: "1234") }
     var bio by remember(profile) { mutableStateOf(profile?.bio ?: "Wedding & Fashion Photography") }
     var cameraGear by remember(profile) { mutableStateOf(profile?.cameraGearDetails ?: "Sony FX3 / A7 IV • DJI Drone • 4K Cinematic Video • Gimbal & Pro Lights") }
-    var customWhatsAppNote by remember(profile) { mutableStateOf(profile?.customWhatsAppNote ?: "લેટેસ્ટ સિનેમેટિક કેમેરા અને ડ્રોન કવરેજ ઉપલબ્ધ છે. તમારા શુભ પ્રસંગના શૂટ માટે સંપર્ક કરો!") }
+    var customWhatsAppNote by remember(profile) { mutableStateOf(profile?.customWhatsAppNote ?: "Latest 4K Cinematic Camera & Drone Coverage Available / नवीनतम 4K सिनेमैटिक कैमरा और ड्रोन कवरेज उपलब्ध है।") }
+    var perDayRateText by remember(profile) { mutableStateOf((profile?.perDayRate?.toInt() ?: 25000).toString()) }
 
     LazyColumn(
         modifier = modifier
@@ -113,8 +114,9 @@ fun OwnerProfileScreen(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Text(
-                            text = "📍 $city",
+                            text = "📍 $city • 💰 ₹${perDayRateText}/Day",
                             fontSize = 11.sp,
+                            fontWeight = FontWeight.SemiBold,
                             color = StudioAmber
                         )
                     }
@@ -145,7 +147,7 @@ fun OwnerProfileScreen(
                     OutlinedTextField(
                         value = studioName,
                         onValueChange = { studioName = it },
-                        label = { Text("Studio Name / સ્ટુડિયોનું નામ") },
+                        label = { Text("Studio Name / स्टूडियो का नाम") },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true
                     )
@@ -153,7 +155,7 @@ fun OwnerProfileScreen(
                     OutlinedTextField(
                         value = photographerName,
                         onValueChange = { photographerName = it },
-                        label = { Text("Photographer / ઓનર નામ") },
+                        label = { Text("Photographer / ओनर का नाम") },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true
                     )
@@ -161,7 +163,7 @@ fun OwnerProfileScreen(
                     OutlinedTextField(
                         value = phone,
                         onValueChange = { phone = it },
-                        label = { Text("Phone Number") },
+                        label = { Text("Phone Number / फ़ोन नंबर") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true
@@ -170,7 +172,7 @@ fun OwnerProfileScreen(
                     OutlinedTextField(
                         value = whatsapp,
                         onValueChange = { whatsapp = it },
-                        label = { Text("WhatsApp Number") },
+                        label = { Text("WhatsApp Number / व्हाट्सएप नंबर") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true
@@ -179,7 +181,7 @@ fun OwnerProfileScreen(
                     OutlinedTextField(
                         value = city,
                         onValueChange = { city = it },
-                        label = { Text("City & State / સરનામું") },
+                        label = { Text("City & State / शहर और राज्य") },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true
                     )
@@ -192,11 +194,40 @@ fun OwnerProfileScreen(
                         maxLines = 3
                     )
 
+                    // Per Day Price / Rate (प्रति दिन दर / Daily Rate)
+                    OutlinedTextField(
+                        value = perDayRateText,
+                        onValueChange = { perDayRateText = it },
+                        label = { Text("💰 Per Day Price / Rate (प्रति दिन दर ₹) *") },
+                        placeholder = { Text("e.g. 25000") },
+                        leadingIcon = {
+                            Text(
+                                text = "₹",
+                                fontWeight = FontWeight.Bold,
+                                color = StudioAmber,
+                                fontSize = 18.sp,
+                                modifier = Modifier.padding(start = 12.dp)
+                            )
+                        },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("input_per_day_rate"),
+                        singleLine = true,
+                        supportingText = {
+                            Text(
+                                text = "Auto-calculates Total Estimated Package based on total calendar days / कैलेंडर के कुल दिनों के अनुसार कुल पैकेज तय करता है",
+                                fontSize = 11.sp,
+                                color = StudioAmber
+                            )
+                        }
+                    )
+
                     // Camera Gear & Details
                     OutlinedTextField(
                         value = cameraGear,
                         onValueChange = { cameraGear = it },
-                        label = { Text("🎥 Camera & Gear Details (કેમેરા સાધનોની વિગત)") },
+                        label = { Text("🎥 Camera & Gear Details (कैमरा उपकरण विवरण)") },
                         placeholder = { Text("e.g. Sony FX3 / A7 IV • DJI Drone • 4K Cinematic") },
                         modifier = Modifier.fillMaxWidth(),
                         maxLines = 3
@@ -206,8 +237,8 @@ fun OwnerProfileScreen(
                     OutlinedTextField(
                         value = customWhatsAppNote,
                         onValueChange = { customWhatsAppNote = it },
-                        label = { Text("💬 WhatsApp Message Note (મેસેજ નોંધ / ઓફર)") },
-                        placeholder = { Text("e.g. લેટેસ્ટ સિનેમેટિક કેમેરા અને ડ્રોન ઉપલબ્ધ છે.") },
+                        label = { Text("💬 WhatsApp Message Note (संदेश नोट / ऑफर)") },
+                        placeholder = { Text("e.g. Latest 4K Cinematic Camera & Drone Coverage Available") },
                         modifier = Modifier.fillMaxWidth(),
                         maxLines = 3
                     )
@@ -239,7 +270,8 @@ fun OwnerProfileScreen(
                                 ownerPin = if (pin.isNotBlank()) pin.trim() else "1234",
                                 bio = bio.trim(),
                                 cameraGearDetails = cameraGear.trim(),
-                                customWhatsAppNote = customWhatsAppNote.trim()
+                                customWhatsAppNote = customWhatsAppNote.trim(),
+                                perDayRate = perDayRateText.toDoubleOrNull() ?: (profile?.perDayRate ?: 25000.0)
                             )
                             onSaveProfile(updated)
                         },
@@ -252,7 +284,7 @@ fun OwnerProfileScreen(
                         Icon(imageVector = Icons.Default.Save, contentDescription = null, tint = Color.Black)
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "Save Profile / પ્રોફાઇલ સાચવો",
+                            text = "Save Profile / प्रोफ़ाइल सहेजें",
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color.Black

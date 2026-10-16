@@ -38,6 +38,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -65,29 +66,46 @@ import com.example.ui.theme.StudioAmber
 
 @Composable
 fun DirectDateControlPanel(
-    dateIso: String,
-    slot: StudioDateSlot?,
-    bookings: List<BookingRequest>,
+    selectedDates: Set<String>,
     allSlots: List<StudioDateSlot>,
-    onSetFreeDate: (String) -> Unit,
-    onSetBookedDate: (String) -> Unit,
-    onSetRequestDate: (String) -> Unit,
-    onClearDate: (String) -> Unit,
-    onDirectBookingDone: (date: String, customerName: String, customerPhone: String, workType: String, amount: Double) -> Unit,
+    bookings: List<BookingRequest>,
+    profile: com.example.data.model.StudioProfile? = null,
+    onToggleDate: (String) -> Unit,
+    onClearAllSelectedDates: () -> Unit,
+    onSetFreeDates: (Set<String>) -> Unit,
+    onSetBookedDates: (Set<String>) -> Unit,
+    onSetRequestDates: (Set<String>) -> Unit,
+    onClearDates: (Set<String>) -> Unit,
+    onDirectBookingDone: (dates: List<String>, customerName: String, customerPhone: String, workType: String, amount: Double) -> Unit,
     onCallCustomer: (String) -> Unit,
     onWhatsAppCustomer: (String, String) -> Unit,
     onClose: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    if (selectedDates.isEmpty()) return
+
+    val perDayRate = profile?.perDayRate ?: 25000.0
+    val daysCount = if (selectedDates.isEmpty()) 1 else selectedDates.size
+
+    val sortedDates = remember(selectedDates) { selectedDates.toList().sorted() }
+    val isMulti = selectedDates.size > 1
+    val singleDateIso = sortedDates.firstOrNull() ?: ""
+    val singleSlot = remember(selectedDates, allSlots) {
+        if (!isMulti) allSlots.find { it.dateStr == singleDateIso } else null
+    }
+
     var showBookingForm by remember { mutableStateOf(false) }
 
     // Direct Booking Form fields
     var customerName by remember { mutableStateOf("") }
     var customerPhone by remember { mutableStateOf("") }
     var selectedWorkType by remember { mutableStateOf(WorkTypeCatalog.allTypes.first()) }
-    var amountText by remember { mutableStateOf(selectedWorkType.defaultEstimate.toInt().toString()) }
+    var amountText by remember(selectedDates.size, perDayRate) {
+        val total = perDayRate * daysCount
+        mutableStateOf(total.toInt().toString())
+    }
 
-    val currentStatus = slot?.status ?: "NOT_SET"
+    val currentStatus = singleSlot?.status ?: "NOT_SET"
     val isFree = currentStatus == DateStatus.FREE.name
     val isBooked = currentStatus == DateStatus.BOOKED.name
     val isRequest = currentStatus == DateStatus.REQUEST.name
@@ -112,7 +130,7 @@ fun DirectDateControlPanel(
                 .fillMaxWidth()
                 .padding(20.dp)
         ) {
-            // Header: Select Date & Date Label
+            // Header: Multi-Date or Single Date
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -120,33 +138,103 @@ fun DirectDateControlPanel(
             ) {
                 Column {
                     Text(
-                        text = "Select Date",
+                        text = if (isMulti) "${selectedDates.size} Dates Selected (चयनित तारीखें)" else "Selected Date (चयनित तारीख)",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Medium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        text = DateUtils.formatFullForDisplay(dateIso),
-                        fontSize = 18.sp,
+                        text = if (isMulti) "${selectedDates.size} Dates Chosen" else DateUtils.formatFullForDisplay(singleDateIso),
+                        fontSize = 17.sp,
                         fontWeight = FontWeight.ExtraBold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                 }
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    StatusBadge(status = currentStatus)
-                    Spacer(modifier = Modifier.width(6.dp))
+                    if (!isMulti) {
+                        StatusBadge(status = currentStatus)
+                        Spacer(modifier = Modifier.width(6.dp))
+                    } else {
+                        TextButton(
+                            onClick = onClearAllSelectedDates,
+                            contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp)
+                        ) {
+                            Text(
+                                text = "Clear All (साफ़ करें)",
+                                fontSize = 11.sp,
+                                color = MaterialTheme.colorScheme.error,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
                     IconButton(onClick = onClose, modifier = Modifier.size(32.dp)) {
                         Icon(imageVector = Icons.Default.Close, contentDescription = "Close", modifier = Modifier.size(18.dp))
                     }
                 }
             }
 
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Chips of Selected Dates
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                items(sortedDates) { dateIso ->
+                    val slot = allSlots.find { it.dateStr == dateIso }
+                    val st = slot?.status
+                    val chipBg = when (st) {
+                        DateStatus.FREE.name -> StatusFreeGreen.copy(alpha = 0.15f)
+                        DateStatus.BOOKED.name -> StatusBookedRed.copy(alpha = 0.15f)
+                        DateStatus.REQUEST.name -> StatusPendingAmber.copy(alpha = 0.15f)
+                        else -> MaterialTheme.colorScheme.surfaceVariant
+                    }
+                    val chipBorder = when (st) {
+                        DateStatus.FREE.name -> StatusFreeGreen
+                        DateStatus.BOOKED.name -> StatusBookedRed
+                        DateStatus.REQUEST.name -> StatusPendingAmber
+                        else -> StudioAmber
+                    }
+                    val emoji = when (st) {
+                        DateStatus.FREE.name -> "🟢"
+                        DateStatus.BOOKED.name -> "🔴"
+                        DateStatus.REQUEST.name -> "🟡"
+                        else -> "⚪"
+                    }
+
+                    Row(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(chipBg)
+                            .border(1.dp, chipBorder, RoundedCornerShape(8.dp))
+                            .clickable { onToggleDate(dateIso) }
+                            .padding(horizontal = 8.dp, vertical = 5.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "$emoji ${DateUtils.formatForDisplay(dateIso)}",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Remove",
+                            modifier = Modifier.size(12.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+
             Spacer(modifier = Modifier.height(14.dp))
 
-            // Text Label
+            // Action Label
             Text(
-                text = "તારીખ સ્ટેટસ પસંદ કરો (Select Date Option):",
+                text = if (isMulti) "Apply Action to all ${selectedDates.size} Dates (सभी तारीखों पर लागू करें):"
+                else "Select Date Status (तारीख स्थिति चुनें):",
                 fontSize = 12.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface
@@ -162,12 +250,12 @@ fun DirectDateControlPanel(
                 // 🟢 FREE DATE Button
                 Button(
                     onClick = {
-                        onSetFreeDate(dateIso)
+                        onSetFreeDates(selectedDates)
                         showBookingForm = false
                     },
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = if (isFree) StatusFreeGreen else StatusFreeGreen.copy(alpha = 0.85f)
+                        containerColor = if (!isMulti && isFree) StatusFreeGreen else StatusFreeGreen.copy(alpha = 0.9f)
                     ),
                     modifier = Modifier
                         .weight(1f)
@@ -178,7 +266,7 @@ fun DirectDateControlPanel(
                         Text(text = "🟢", fontSize = 14.sp)
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = "FREE DATE",
+                            text = if (isMulti) "FREE (${selectedDates.size})" else "FREE (उपलब्ध)",
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color.White
@@ -189,12 +277,12 @@ fun DirectDateControlPanel(
                 // 🔴 BOOKED DATE Button
                 Button(
                     onClick = {
-                        onSetBookedDate(dateIso)
+                        onSetBookedDates(selectedDates)
                         showBookingForm = false
                     },
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = if (isBooked) StatusBookedRed else StatusBookedRed.copy(alpha = 0.85f)
+                        containerColor = if (!isMulti && isBooked) StatusBookedRed else StatusBookedRed.copy(alpha = 0.9f)
                     ),
                     modifier = Modifier
                         .weight(1f)
@@ -205,7 +293,7 @@ fun DirectDateControlPanel(
                         Text(text = "🔴", fontSize = 14.sp)
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = "BOOKED DATE",
+                            text = if (isMulti) "BOOKED (${selectedDates.size})" else "BOOKED (बुक)",
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color.White
@@ -224,12 +312,12 @@ fun DirectDateControlPanel(
                 // 🟡 REQUEST DATE Button
                 Button(
                     onClick = {
-                        onSetRequestDate(dateIso)
+                        onSetRequestDates(selectedDates)
                         showBookingForm = false
                     },
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = if (isRequest) StatusPendingAmber else StatusPendingAmber.copy(alpha = 0.9f)
+                        containerColor = if (!isMulti && isRequest) StatusPendingAmber else StatusPendingAmber.copy(alpha = 0.9f)
                     ),
                     modifier = Modifier
                         .weight(1f)
@@ -240,7 +328,7 @@ fun DirectDateControlPanel(
                         Text(text = "🟡", fontSize = 14.sp)
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = "REQUEST DATE",
+                            text = if (isMulti) "REQUEST (${selectedDates.size})" else "REQUEST (अनुरोध)",
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color.White
@@ -248,10 +336,10 @@ fun DirectDateControlPanel(
                     }
                 }
 
-                // ⚪ / 🗑️ CLEAR DATE Button (તારીખ ખાલી કરો / Reset)
+                // ⚪ / 🗑️ CLEAR DATE Button
                 OutlinedButton(
                     onClick = {
-                        onClearDate(dateIso)
+                        onClearDates(selectedDates)
                         showBookingForm = false
                     },
                     shape = RoundedCornerShape(12.dp),
@@ -269,7 +357,7 @@ fun DirectDateControlPanel(
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = "CLEAR DATE",
+                            text = if (isMulti) "CLEAR (${selectedDates.size})" else "CLEAR (हटाएं)",
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.error
@@ -280,7 +368,7 @@ fun DirectDateControlPanel(
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            // 📋 BOOKING Section (For FREE date -> Tap -> BOOKING -> Form -> DONE -> FREE 🟢 -> BOOKED 🔴)
+            // 📋 DIRECT BOOKING Section
             if (!showBookingForm) {
                 OutlinedButton(
                     onClick = { showBookingForm = true },
@@ -297,7 +385,8 @@ fun DirectDateControlPanel(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "📋 BOOKING (FREE 🟢 → BOOKED 🔴)",
+                        text = if (isMulti) "📋 DIRECT BOOKING FOR ${selectedDates.size} DATES (सीधी बुकिंग)"
+                        else "📋 DIRECT BOOKING (सीधी बुकिंग: FREE 🟢 → BOOKED 🔴)",
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
@@ -321,7 +410,7 @@ fun DirectDateControlPanel(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "📋 Direct Booking Details",
+                            text = if (isMulti) "📋 Booking for ${selectedDates.size} Selected Dates" else "📋 Direct Booking Details",
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface
@@ -338,7 +427,7 @@ fun DirectDateControlPanel(
                     OutlinedTextField(
                         value = customerName,
                         onValueChange = { customerName = it },
-                        label = { Text("Customer Name (ગ્રાહકનું નામ) *") },
+                        label = { Text("Customer Name (ग्राहक का नाम) *") },
                         leadingIcon = {
                             Icon(imageVector = Icons.Default.Person, contentDescription = null, tint = StudioAmber)
                         },
@@ -352,7 +441,7 @@ fun DirectDateControlPanel(
                     OutlinedTextField(
                         value = customerPhone,
                         onValueChange = { customerPhone = it },
-                        label = { Text("Customer Phone (મોબાઇલ નંબર)") },
+                        label = { Text("Customer Phone (फ़ोन नंबर)") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                         modifier = Modifier
                             .fillMaxWidth()
@@ -362,7 +451,7 @@ fun DirectDateControlPanel(
 
                     // Exposure / Work Type
                     Text(
-                        text = "Exposure / Work Type:",
+                        text = "Photography / Work Type (फोटोग्राफी का प्रकार):",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSurface
@@ -382,13 +471,14 @@ fun DirectDateControlPanel(
                                     )
                                     .clickable {
                                         selectedWorkType = type
-                                        amountText = type.defaultEstimate.toInt().toString()
+                                        val total = perDayRate * selectedDates.size
+                                        amountText = total.toInt().toString()
                                     }
                                     .padding(horizontal = 10.dp, vertical = 6.dp),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
-                                    text = "${type.iconEmoji} ${type.englishName.split(" ")[0]}",
+                                    text = "${type.iconEmoji} ${type.englishName.split(" ")[0]} (${type.hindiName})",
                                     fontSize = 11.sp,
                                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
                                     color = if (isSelected) Color.Black else MaterialTheme.colorScheme.onSurface
@@ -397,27 +487,49 @@ fun DirectDateControlPanel(
                         }
                     }
 
-                    // Amount
+                    // Amount / Total Package
                     OutlinedTextField(
                         value = amountText,
                         onValueChange = { amountText = it },
-                        label = { Text("Amount / રકમ (₹)") },
+                        label = {
+                            Text(
+                                if (daysCount > 1) "Total Estimated Package ($daysCount Days × ₹${perDayRate.toInt()}/day) / कुल राशि (₹)"
+                                else "Total Estimated Package (1 Day × ₹${perDayRate.toInt()}) / कुल राशि (₹)"
+                            )
+                        },
+                        leadingIcon = {
+                            Text(
+                                text = "₹",
+                                fontWeight = FontWeight.Bold,
+                                color = StudioAmber,
+                                fontSize = 18.sp,
+                                modifier = Modifier.padding(start = 12.dp)
+                            )
+                        },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         modifier = Modifier
                             .fillMaxWidth()
                             .testTag("direct_booking_amount"),
-                        singleLine = true
+                        singleLine = true,
+                        supportingText = {
+                            Text(
+                                text = "💰 Rate: ₹${perDayRate.toInt()} / Day • $daysCount Day(s) = ₹${(perDayRate * daysCount).toInt()} / प्रति दिन दर ₹${perDayRate.toInt()} के आधार पर कुल पैकेज",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = StudioAmber
+                            )
+                        }
                     )
 
-                    // DONE Button -> FREE 🟢 -> BOOKED 🔴
+                    // DONE Button -> Mark as BOOKED 🔴
                     Button(
                         onClick = {
-                            val amount = amountText.toDoubleOrNull() ?: selectedWorkType.defaultEstimate
+                            val amount = amountText.toDoubleOrNull() ?: (perDayRate * selectedDates.size)
                             onDirectBookingDone(
-                                dateIso,
+                                sortedDates,
                                 customerName,
                                 customerPhone,
-                                selectedWorkType.englishName,
+                                selectedWorkType.displayName,
                                 amount
                             )
                             showBookingForm = false
@@ -432,7 +544,7 @@ fun DirectDateControlPanel(
                         Icon(imageVector = Icons.Default.CheckCircle, contentDescription = null, tint = Color.White)
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "DONE (Mark as BOOKED 🔴)",
+                            text = if (isMulti) "DONE (Book ${selectedDates.size} Dates 🔴)" else "DONE (Mark as BOOKED 🔴)",
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color.White
@@ -443,7 +555,7 @@ fun DirectDateControlPanel(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // LIVE COUNTING ROW RIGHT BELOW IT
+            // LIVE COUNTING ROW
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -491,18 +603,19 @@ fun DirectDateControlPanel(
                 }
             }
 
-            // Existing Bookings for this date
-            if (bookings.isNotEmpty()) {
+            // Existing Bookings for selected date(s)
+            val bookingsOnSelectedDates = bookings.filter { selectedDates.contains(it.dateStr) }
+            if (bookingsOnSelectedDates.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(14.dp))
                 Text(
-                    text = "Customer Bookings on this Date:",
+                    text = "Customer Bookings on Selected Dates (${bookingsOnSelectedDates.size}):",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Spacer(modifier = Modifier.height(6.dp))
 
-                bookings.forEach { req ->
+                bookingsOnSelectedDates.forEach { req ->
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -514,7 +627,7 @@ fun DirectDateControlPanel(
                     ) {
                         Column {
                             Text(
-                                text = req.customerName,
+                                text = "${req.customerName} • ${DateUtils.formatForDisplay(req.dateStr)}",
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurface
@@ -538,7 +651,7 @@ fun DirectDateControlPanel(
                                     onClick = {
                                         onWhatsAppCustomer(
                                             req.customerPhone,
-                                            "Hello ${req.customerName}, regarding your shoot on $dateIso..."
+                                            "Hello ${req.customerName}, regarding your shoot on ${DateUtils.formatForDisplay(req.dateStr)}..."
                                         )
                                     },
                                     modifier = Modifier.size(28.dp)

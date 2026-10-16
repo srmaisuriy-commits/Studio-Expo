@@ -12,19 +12,19 @@ object DateUtils {
     private val fullDayFormat = SimpleDateFormat("EEEE, dd MMMM yyyy", Locale.US)
     private val monthYearFormat = SimpleDateFormat("MMMM yyyy", Locale.US)
 
-    private val gujaratiMonths = mapOf(
-        0 to "જાન્યુઆરી (January)",
-        1 to "ફેબ્રુઆરી (February)",
-        2 to "માર્ચ (March)",
-        3 to "એપ્રિલ (April)",
-        4 to "મે (May)",
-        5 to "જૂન (June)",
-        6 to "જુલાઇ (July)",
-        7 to "ઓગસ્ટ (August)",
-        8 to "સપ્ટેમ્બર (September)",
-        9 to "ઓક્ટોબર (October)",
-        10 to "નવેમ્બર (November)",
-        11 to "ડિસેમ્બર (December)"
+    private val hindiMonths = mapOf(
+        0 to "जनवरी (January)",
+        1 to "फ़रवरी (February)",
+        2 to "मार्च (March)",
+        3 to "अप्रैल (April)",
+        4 to "मई (May)",
+        5 to "जून (June)",
+        6 to "जुलाई (July)",
+        7 to "अगस्त (August)",
+        8 to "सितंबर (September)",
+        9 to "अक्टूबर (October)",
+        10 to "नवंबर (November)",
+        11 to "दिसंबर (December)"
     )
 
     fun todayIso(): String {
@@ -59,14 +59,8 @@ object DateUtils {
     }
 
     fun getMonthYearLabel(year: Int, monthZeroIndexed: Int): String {
-        val cal = Calendar.getInstance().apply {
-            set(Calendar.YEAR, year)
-            set(Calendar.MONTH, monthZeroIndexed)
-            set(Calendar.DAY_OF_MONTH, 1)
-        }
-        val enLabel = monthYearFormat.format(cal.time)
-        val gujMonth = gujaratiMonths[monthZeroIndexed] ?: ""
-        return "$gujMonth $year"
+        val hindiMonth = hindiMonths[monthZeroIndexed] ?: ""
+        return "$hindiMonth $year"
     }
 
     fun getMonthYearEnLabel(year: Int, monthZeroIndexed: Int): String {

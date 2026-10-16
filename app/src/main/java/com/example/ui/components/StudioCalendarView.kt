@@ -213,7 +213,7 @@ fun StudioCalendarView(
                 CountingItem(
                     emoji = "🟢",
                     title = "Free",
-                    gujaratiTitle = "ઉપલબ્ધ",
+                    hindiTitle = "उपलब्ध",
                     count = freeCount,
                     color = StatusFreeGreen
                 )
@@ -228,7 +228,7 @@ fun StudioCalendarView(
                 CountingItem(
                     emoji = "🔴",
                     title = "Booked",
-                    gujaratiTitle = "બુક થયેલ",
+                    hindiTitle = "बुक",
                     count = bookedCount,
                     color = StatusBookedRed
                 )
@@ -243,7 +243,7 @@ fun StudioCalendarView(
                 CountingItem(
                     emoji = "🟡",
                     title = "Request",
-                    gujaratiTitle = "વિનંતી",
+                    hindiTitle = "अनुरोध",
                     count = requestCount,
                     color = StatusPendingAmber
                 )
@@ -256,7 +256,7 @@ fun StudioCalendarView(
 private fun CountingItem(
     emoji: String,
     title: String,
-    gujaratiTitle: String,
+    hindiTitle: String,
     count: Int,
     color: Color
 ) {
@@ -284,7 +284,7 @@ private fun CountingItem(
                 )
             }
             Text(
-                text = gujaratiTitle,
+                text = hindiTitle,
                 fontSize = 9.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
