@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Studio Expo • Luxury Wedding & Cinematic Photography</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,600;0,700;1,600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #0F1115;
+      --surface-dark: #181B20;
+      --surface-card: #20242C;
+      --amber-gold: #FFB300;
+      --amber-glow: rgba(255, 179, 0, 0.25);
+      --green-free: #00E676;
+      --red-booked: #FF5252;
+      --amber-pending: #FFD600;
+      --text-main: #FFFFFF;
+      --text-muted: #9E9EA7;
+      --border-subtle: rgba(255, 255, 255, 0.08);
+      --font-heading: 'Playfair Display', serif;
+      --font-body: 'Plus Jakarta Sans', sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      font-family: var(--font-body);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* HEADER */
+    header {
+      background: rgba(15, 17, 21, 0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border-subtle);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .nav-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 16px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      color: inherit;
+    }
+
+    .brand-logo {
+      width: 44px;
+      height: 44px;
+      background: var(--surface-card);
+      border: 1px solid var(--amber-gold);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+    }
+
+    .brand-title {
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+    }
+
+    .brand-sub {
+      font-size: 11px;
+      color: var(--amber-gold);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      font-weight: 600;
+    }
+
+    .nav-actions {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 18px;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      text-decoration: none;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s ease;
+    }
+
+    .btn-gold {
+      background: var(--amber-gold);
+      color: #000;
+    }
+
+    .btn-gold:hover {
+      background: #FFA000;
+      transform: translateY(-1px);
+    }
+
+    .btn-outline {
+      background: transparent;
+      color: var(--text-main);
+      border: 1px solid var(--border-subtle);
+    }
+
+    .btn-outline:hover {
+      border-color: var(--amber-gold);
+      color: var(--amber-gold);
+    }
+
+    .btn-green {
+      background: var(--green-free);
+      color: #000;
+    }
+
+    .btn-green:hover {
+      background: #00C853;
+    }
+
+    /* HERO */
+    .hero {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 60px 24px 40px;
+      text-align: center;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--surface-card);
+      border: 1px solid var(--border-subtle);
+      padding: 6px 14px;
+      border-radius: 30px;
+      font-size: 12px;
+      color: var(--amber-gold);
+      font-weight: 600;
+      margin-bottom: 20px;
+    }
+
+    .hero h1 {
+      font-family: var(--font-heading);
+      font-size: clamp(32px, 5vw, 54px);
+      line-height: 1.15;
+      margin-bottom: 16px;
+      color: #FFF;
+    }
+
+    .hero h1 span {
+      color: var(--amber-gold);
+    }
+
+    .hero p {
+      max-width: 680px;
+      margin: 0 auto 30px;
+      color: var(--text-muted);
+      font-size: 16px;
+    }
+
+    /* STATS ROW */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      max-width: 1000px;
+      margin: 0 auto 50px;
+    }
+
+    .stat-card {
+      background: var(--surface-card);
+      border: 1px solid var(--border-subtle);
+      padding: 18px;
+      border-radius: 16px;
+      text-align: center;
+    }
+
+    .stat-num {
+      font-size: 24px;
+      font-weight: 800;
+      color: var(--amber-gold);
+    }
+
+    .stat-label {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    /* BOOKING & CALENDAR CONTAINER */
+    .booking-section {
+      max-width: 1200px;
+      margin: 0 auto 60px;
+      padding: 0 24px;
+    }
+
+    .section-header {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+
+    .section-header h2 {
+      font-family: var(--font-heading);
+      font-size: 32px;
+      margin-bottom: 8px;
+    }
+
+    .section-header p {
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+
+    .booking-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 28px;
+      align-items: start;
+    }
+
+    @media (max-width: 900px) {
+      .booking-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* CALENDAR CARD */
+    .calendar-card {
+      background: var(--surface-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 20px;
+      padding: 24px;
+    }
+
+    .calendar-nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .calendar-month {
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .cal-btn {
+      background: var(--surface-dark);
+      border: 1px solid var(--border-subtle);
+      color: #FFF;
+      padding: 6px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    .cal-btn:hover {
+      background: var(--amber-gold);
+      color: #000;
+    }
+
+    .legend {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 18px;
+      font-size: 11px;
+      color: var(--text-muted);
+      flex-wrap: wrap;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+
+    .dot-free { background: var(--green-free); }
+    .dot-booked { background: var(--red-booked); }
+    .dot-request { background: var(--amber-pending); }
+
+    .calendar-days-header {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      text-align: center;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+    }
+
+    .calendar-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 8px;
+    }
+
+    .cal-cell {
+      aspect-ratio: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      border-radius: 12px;
+      background: var(--surface-dark);
+      border: 1px solid var(--border-subtle);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      position: relative;
+    }
+
+    .cal-cell:hover {
+      border-color: var(--amber-gold);
+    }
+
+    .cal-cell.empty {
+      background: transparent;
+      border: none;
+      cursor: default;
+    }
+
+    .cal-cell.status-free {
+      background: rgba(0, 230, 118, 0.12);
+      border-color: rgba(0, 230, 118, 0.4);
+    }
+
+    .cal-cell.status-free .cell-status-label {
+      color: var(--green-free);
+    }
+
+    .cal-cell.status-booked {
+      background: rgba(255, 82, 82, 0.1);
+      border-color: rgba(255, 82, 82, 0.3);
+      cursor: not-allowed;
+    }
+
+    .cal-cell.status-booked .cell-status-label {
+      color: var(--red-booked);
+    }
+
+    .cal-cell.selected {
+      background: var(--amber-gold) !important;
+      border-color: #FFF !important;
+      color: #000 !important;
+      box-shadow: 0 0 12px var(--amber-glow);
+    }
+
+    .cal-cell.selected .cell-day,
+    .cal-cell.selected .cell-status-label {
+      color: #000 !important;
+      font-weight: 800;
+    }
+
+    .cell-day {
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .cell-status-label {
+      font-size: 8px;
+      text-transform: uppercase;
+      font-weight: 700;
+      margin-top: 2px;
+    }
+
+    /* SELECTED DATES BAR */
+    .selected-bar {
+      margin-top: 18px;
+      padding: 12px 16px;
+      background: rgba(0, 230, 118, 0.1);
+      border: 1px solid rgba(0, 230, 118, 0.3);
+      border-radius: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+    }
+
+    .selected-chips {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-top: 6px;
+    }
+
+    .chip {
+      background: var(--surface-dark);
+      border: 1px solid var(--amber-gold);
+      color: var(--amber-gold);
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    /* FORM CARD */
+    .form-card {
+      background: var(--surface-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 20px;
+      padding: 26px;
+    }
+
+    .form-title {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .form-sub {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 20px;
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 6px;
+      color: #DDD;
+    }
+
+    .form-control {
+      width: 100%;
+      background: var(--surface-dark);
+      border: 1px solid var(--border-subtle);
+      color: #FFF;
+      padding: 12px 14px;
+      border-radius: 10px;
+      font-size: 14px;
+      font-family: inherit;
+    }
+
+    .form-control:focus {
+      outline: none;
+      border-color: var(--amber-gold);
+      box-shadow: 0 0 0 2px var(--amber-glow);
+    }
+
+    .price-box {
+      background: rgba(255, 179, 0, 0.1);
+      border: 1px solid var(--amber-gold);
+      border-radius: 12px;
+      padding: 14px;
+      margin-bottom: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .price-label {
+      font-size: 12px;
+      color: var(--amber-gold);
+      font-weight: 600;
+    }
+
+    .price-value {
+      font-size: 22px;
+      font-weight: 800;
+      color: #FFF;
+    }
+
+    .price-breakdown {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    /* GEAR & SERVICES */
+    .gear-section {
+      max-width: 1200px;
+      margin: 0 auto 60px;
+      padding: 0 24px;
+    }
+
+    .gear-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 20px;
+    }
+
+    .gear-card {
+      background: var(--surface-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 16px;
+      padding: 22px;
+    }
+
+    .gear-icon {
+      font-size: 32px;
+      margin-bottom: 12px;
+    }
+
+    .gear-card h3 {
+      font-size: 18px;
+      margin-bottom: 6px;
+    }
+
+    .gear-card p {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    /* FOOTER */
+    footer {
+      border-top: 1px solid var(--border-subtle);
+      padding: 40px 24px;
+      background: var(--surface-dark);
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 13px;
+    }
+
+    footer p {
+      margin-bottom: 8px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- NAVBAR -->
+  <header>
+    <div class="nav-container">
+      <a href="#" class="brand">
+        <div class="brand-logo">📸</div>
+        <div>
+          <div class="brand-title">Studio Expo</div>
+          <div class="brand-sub">Rajesh Maisuriya • Lead Photographer</div>
+        </div>
+      </a>
+      <div class="nav-actions">
+        <a href="#booking" class="btn btn-gold">📅 Check Dates</a>
+        <a href="https://wa.me/919876543210" target="_blank" class="btn btn-green">💬 WhatsApp</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-badge">📍 Ahmedabad, Gujarat • Available Across India</div>
+    <h1>Timeless Memories, <span>Cinematic Perfection</span></h1>
+    <p>Luxury Wedding, Pre-Wedding & Fashion Portfolio Photography. Reserve your dates directly on our interactive calendar.</p>
+    
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-num">₹25,000</div>
+        <div class="stat-label">Starting Package / Day (प्रति दिन)</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num">4K HDR</div>
+        <div class="stat-label">Cinematic Video & Drone Coverage</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num">500+</div>
+        <div class="stat-label">Happy Couples & Ceremonies Captured</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- BOOKING & CALENDAR -->
+  <section id="booking" class="booking-section">
+    <div class="section-header">
+      <h2>Interactive Date Booking / तारीख चुनें</h2>
+      <p>Select one or multiple dates on the calendar. Total package updates automatically based on total days.</p>
+    </div>
+
+    <div class="booking-grid">
+      <!-- CALENDAR -->
+      <div class="calendar-card">
+        <div class="calendar-nav">
+          <button class="cal-btn" onclick="prevMonth()">◀ Prev</button>
+          <div class="calendar-month" id="monthDisplay">October 2026</div>
+          <button class="cal-btn" onclick="nextMonth()">Next ▶</button>
+        </div>
+
+        <div class="legend">
+          <div class="legend-item"><div class="dot dot-free"></div> Free / Available (🟢 उपलब्ध)</div>
+          <div class="legend-item"><div class="dot dot-booked"></div> Booked (🔴 बुक)</div>
+        </div>
+
+        <div class="calendar-days-header">
+          <div>SUN</div><div>MON</div><div>TUE</div><div>WED</div><div>THU</div><div>FRI</div><div>SAT</div>
+        </div>
+
+        <div class="calendar-grid" id="calendarGrid">
+          <!-- Calendar cells rendered by JS -->
+        </div>
+
+        <div class="selected-bar" id="selectedDatesBar">
+          <div>
+            <strong>Selected Dates:</strong>
+            <div class="selected-chips" id="selectedChips">Click dates above to select</div>
+          </div>
+          <button class="cal-btn" onclick="clearSelectedDates()">Clear</button>
+        </div>
+      </div>
+
+      <!-- BOOKING FORM -->
+      <div class="form-card">
+        <div class="form-title">Book Special Dates / बुकिंग अनुरोध</div>
+        <div class="form-sub">Direct reservation request to Rajesh Maisuriya</div>
+
+        <div class="price-box">
+          <div>
+            <div class="price-label">TOTAL ESTIMATED PACKAGE / कुल राशि</div>
+            <div class="price-value" id="priceDisplay">₹25,000</div>
+            <div class="price-breakdown" id="priceBreakdown">1 Day × ₹25,000 / Day</div>
+          </div>
+          <div style="font-size: 28px;">💎</div>
+        </div>
+
+        <form id="bookingForm" onsubmit="submitBooking(event)">
+          <div class="form-group">
+            <label>Your Full Name (आपका नाम) *</label>
+            <input type="text" class="form-control" id="custName" placeholder="e.g. Amit Patel" required>
+          </div>
+
+          <div class="form-group">
+            <label>Mobile / WhatsApp Number (फ़ोन नंबर) *</label>
+            <input type="tel" class="form-control" id="custPhone" placeholder="e.g. 9876543210" required>
+          </div>
+
+          <div class="form-group">
+            <label>Shoot / Event Type (इवेंट का प्रकार) *</label>
+            <select class="form-control" id="custWorkType">
+              <option value="Wedding Ceremony">💍 Wedding Ceremony (शादी / विवाह)</option>
+              <option value="Pre-Wedding Shoot">📸 Pre-Wedding Shoot (प्री-वेडिंग)</option>
+              <option value="Sangeet / Engagement">🎵 Sangeet / Engagement (संगीत / सगाई)</option>
+              <option value="Reception Night">✨ Reception Night (रिसेप्शन)</option>
+              <option value="Baby Shower / Maternity">🍼 Baby Shower / Maternity (मातृत्व)</option>
+              <option value="Model / Fashion Portfolio">👗 Fashion & Model Portfolio (मॉडल)</option>
+              <option value="Commercial Event">🏢 Corporate & Commercial (कमर्शियल)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Venue / City Location (स्थान / शहर) *</label>
+            <input type="text" class="form-control" id="custLocation" placeholder="e.g. Shubh Banquet, Ahmedabad" required>
+          </div>
+
+          <div class="form-group">
+            <label>Special Requirements / Notes (विशेष आवश्यकताएं)</label>
+            <textarea class="form-control" id="custNotes" rows="2" placeholder="e.g. Drone video required, 2-day shoot"></textarea>
+          </div>
+
+          <button type="submit" class="btn btn-green" style="width: 100%; justify-content: center; font-size: 16px; padding: 14px;">
+            💬 Reserve & Confirm via WhatsApp
+          </button>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <!-- GEAR & SERVICES -->
+  <section class="gear-section">
+    <div class="section-header">
+      <h2>Professional Gear & Equipment / कैमरा उपकरण</h2>
+      <p>State-of-the-art cinematic tools ensuring magazine-grade color science and clarity.</p>
+    </div>
+
+    <div class="gear-grid">
+      <div class="gear-card">
+        <div class="gear-icon">🎥</div>
+        <h3>Sony Cinema Line FX3 & A7 IV</h3>
+        <p>10-bit 4:2:2 cinematic video with pro prime lenses for dreamy bokeh and ultra-sharp portraits.</p>
+      </div>
+
+      <div class="gear-card">
+        <div class="gear-icon">🚁</div>
+        <h3>DJI 4K Aerial Drone</h3>
+        <p>Breathtaking high-altitude venue and entry shots delivering true Bollywood-style grandeur.</p>
+      </div>
+
+      <div class="gear-card">
+        <div class="gear-icon">💡</div>
+        <h3>Studio Pro Lighting & Gimbals</h3>
+        <p>Continuous Godox lighting and Ronin stabilizers for flawless low-light reception shoots.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer>
+    <p><strong>Studio Expo</strong> • Photography & Films by Rajesh Maisuriya</p>
+    <p>📍 Ahmedabad, Gujarat, India • 📞 +91 9876543210 • 📸 @studioexpo.official</p>
+    <p style="margin-top: 12px; font-size: 11px;">Powered by Google AI Studio Build & Firebase</p>
+  </footer>
+
+  <!-- SCRIPT -->
+  <script>
+    const PER_DAY_PRICE = 25000;
+    const STUDIO_WHATSAPP = "919876543210";
+
+    let currentYear = 2026;
+    let currentMonth = 9; // October (0-indexed)
+    let selectedDates = new Set();
+
+    // Sample booked dates
+    const bookedDates = ["2026-10-18", "2026-10-24", "2026-10-25", "2026-11-08"];
+
+    const monthNames = [
+      "January", "February", "March", "April", "May", "June",
+      "July", "August", "September", "October", "November", "December"
+    ];
+
+    function renderCalendar() {
+      const monthDisplay = document.getElementById("monthDisplay");
+      monthDisplay.innerText = `${monthNames[currentMonth]} ${currentYear}`;
+
+      const grid = document.getElementById("calendarGrid");
+      grid.innerHTML = "";
+
+      const firstDay = new Date(currentYear, currentMonth, 1).getDay();
+      const totalDays = new Date(currentYear, currentMonth + 1, 0).getDate();
+
+      // Empty lead days
+      for (let i = 0; i < firstDay; i++) {
+        const emptyCell = document.createElement("div");
+        emptyCell.className = "cal-cell empty";
+        grid.appendChild(emptyCell);
+      }
+
+      // Month days
+      for (let day = 1; day <= totalDays; day++) {
+        const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+        const isBooked = bookedDates.includes(dateStr);
+        const isSelected = selectedDates.has(dateStr);
+
+        const cell = document.createElement("div");
+        cell.className = "cal-cell";
+        if (isBooked) {
+          cell.classList.add("status-booked");
+        } else {
+          cell.classList.add("status-free");
+        }
+        if (isSelected) {
+          cell.classList.add("selected");
+        }
+
+        cell.innerHTML = `
+          <div class="cell-day">${day}</div>
+          <div class="cell-status-label">${isBooked ? "BOOKED" : "FREE"}</div>
+        `;
+
+        if (!isBooked) {
+          cell.onclick = () => toggleDate(dateStr);
+        }
+
+        grid.appendChild(cell);
+      }
+
+      updateSelectedSummary();
+    }
+
+    function toggleDate(dateStr) {
+      if (selectedDates.has(dateStr)) {
+        selectedDates.delete(dateStr);
+      } else {
+        selectedDates.add(dateStr);
+      }
+      renderCalendar();
+    }
+
+    function clearSelectedDates() {
+      selectedDates.clear();
+      renderCalendar();
+    }
+
+    function updateSelectedSummary() {
+      const chipsContainer = document.getElementById("selectedChips");
+      const priceDisplay = document.getElementById("priceDisplay");
+      const priceBreakdown = document.getElementById("priceBreakdown");
+
+      if (selectedDates.size === 0) {
+        chipsContainer.innerHTML = "<em>Click dates above to select</em>";
+        priceDisplay.innerText = `₹${PER_DAY_PRICE.toLocaleString()}`;
+        priceBreakdown.innerText = `1 Day × ₹${PER_DAY_PRICE.toLocaleString()} / Day`;
+      } else {
+        chipsContainer.innerHTML = "";
+        const sorted = Array.from(selectedDates).sort();
+        sorted.forEach(d => {
+          const chip = document.createElement("span");
+          chip.className = "chip";
+          chip.innerText = d;
+          chipsContainer.appendChild(chip);
+        });
+
+        const count = selectedDates.size;
+        const total = count * PER_DAY_PRICE;
+        priceDisplay.innerText = `₹${total.toLocaleString()}`;
+        priceBreakdown.innerText = `${count} Days × ₹${PER_DAY_PRICE.toLocaleString()} / Day`;
+      }
+    }
+
+    function prevMonth() {
+      if (currentMonth === 0) {
+        currentMonth = 11;
+        currentYear--;
+      } else {
+        currentMonth--;
+      }
+      renderCalendar();
+    }
+
+    function nextMonth() {
+      if (currentMonth === 11) {
+        currentMonth = 0;
+        currentYear++;
+      } else {
+        currentMonth++;
+      }
+      renderCalendar();
+    }
+
+    function submitBooking(e) {
+      e.preventDefault();
+      const name = document.getElementById("custName").value.trim();
+      const phone = document.getElementById("custPhone").value.trim();
+      const workType = document.getElementById("custWorkType").value;
+      const location = document.getElementById("custLocation").value.trim();
+      const notes = document.getElementById("custNotes").value.trim();
+
+      const datesList = selectedDates.size > 0 ? Array.from(selectedDates).sort().join(", ") : "Not selected yet";
+      const totalDays = selectedDates.size > 0 ? selectedDates.size : 1;
+      const totalAmount = totalDays * PER_DAY_PRICE;
+
+      const message = `*📸 NEW BOOKING INQUIRY - STUDIO EXPO*\n\n` +
+        `*Customer:* ${name}\n` +
+        `*Phone:* ${phone}\n` +
+        `*Dates Requested (${totalDays} Days):* ${datesList}\n` +
+        `*Shoot Type:* ${workType}\n` +
+        `*Total Estimated Package:* ₹${totalAmount.toLocaleString()}\n` +
+        `*Venue Location:* ${location}\n` +
+        (notes ? `*Special Notes:* ${notes}\n\n` : `\n`) +
+        `_Sent via Studio Expo Web Portal_`;
+
+      const encodedMsg = encodeURIComponent(message);
+      const whatsappUrl = `https://wa.me/${STUDIO_WHATSAPP}?text=${encodedMsg}`;
+      window.open(whatsappUrl, "_blank");
+    }
+
+    // Initialize calendar
+    renderCalendar();
+  </script>
+</body>
+</html>
