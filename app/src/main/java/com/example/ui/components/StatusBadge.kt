@@ -1,68 +1,71 @@
 package com.example.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ui.theme.StatusBookedRed
-import com.example.ui.theme.StatusBookedRedLight
 import com.example.ui.theme.StatusFreeGreen
-import com.example.ui.theme.StatusFreeGreenLight
-import com.example.ui.theme.StatusPendingAmber
-import com.example.ui.theme.StatusPendingAmberLight
+import com.example.ui.theme.StatusRequestYellow
 
 @Composable
 fun StatusBadge(
     status: String,
     modifier: Modifier = Modifier
 ) {
-    val (bgColor, textColor, dotColor, label) = when (status.uppercase()) {
-        "FREE" -> Quad(StatusFreeGreenLight, Color(0xFF065F46), StatusFreeGreen, "🟢 FREE")
-        "BOOKED" -> Quad(StatusBookedRedLight, Color(0xFF991B1B), StatusBookedRed, "🔴 BOOKED")
-        "REQUEST" -> Quad(StatusPendingAmberLight, Color(0xFF92400E), StatusPendingAmber, "🟡 REQUEST")
-        "CONFIRMED" -> Quad(StatusFreeGreenLight, Color(0xFF065F46), StatusFreeGreen, "✅ CONFIRMED")
-        "PENDING" -> Quad(StatusPendingAmberLight, Color(0xFF92400E), StatusPendingAmber, "🟡 PENDING")
-        "REJECTED" -> Quad(Color(0xFFF3F4F6), Color(0xFF4B5563), Color(0xFF9CA3AF), "❌ REJECTED")
-        "NOT_SET", "NONE", "CLEAR" -> Quad(Color(0xFFF3F4F6), Color(0xFF4B5563), Color(0xFF9CA3AF), "⚪ CLEAR")
-        else -> Quad(Color(0xFFE5E7EB), Color(0xFF374151), Color(0xFF6B7280), status)
+    val (bgColor, textColor, borderColor, label) = when (status.uppercase()) {
+        "FREE" -> Quad(
+            Color(0xFF1B3826),
+            StatusFreeGreen,
+            StatusFreeGreen.copy(alpha = 0.5f),
+            "🟢 AVAILABLE / FREE"
+        )
+        "BOOKED" -> Quad(
+            Color(0xFF381B1B),
+            StatusBookedRed,
+            StatusBookedRed.copy(alpha = 0.5f),
+            "🔴 BOOKED"
+        )
+        "PENDING", "REQUEST" -> Quad(
+            Color(0xFF3A3317),
+            StatusRequestYellow,
+            StatusRequestYellow.copy(alpha = 0.5f),
+            "🟡 REQUEST / PENDING"
+        )
+        "OFF", "BUSY" -> Quad(
+            Color(0xFF262A33),
+            Color(0xFF90A4AE),
+            Color(0xFF455A64),
+            "⚪ OFF / BUSY"
+        )
+        else -> Quad(
+            Color(0xFF20242C),
+            Color(0xFF78909C),
+            Color(0xFF37474F),
+            "⚪ NOT SET"
+        )
     }
 
     Box(
         modifier = modifier
-            .clip(RoundedCornerShape(12.dp))
-            .background(bgColor)
-            .padding(horizontal = 8.dp, vertical = 4.dp),
-        contentAlignment = Alignment.Center
+            .background(bgColor, shape = RoundedCornerShape(12.dp))
+            .border(1.dp, borderColor, shape = RoundedCornerShape(12.dp))
+            .padding(horizontal = 8.dp, vertical = 4.dp)
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                modifier = Modifier
-                    .size(6.dp)
-                    .clip(CircleShape)
-                    .background(dotColor)
-            )
-            Spacer(modifier = Modifier.width(4.dp))
-            Text(
-                text = label,
-                color = textColor,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Bold
-            )
-        }
+        Text(
+            text = label,
+            color = textColor,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Bold
+        )
     }
 }
 

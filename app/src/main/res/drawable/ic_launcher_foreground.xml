@@ -1,8 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
-<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <item
-        android:width="66dp"
-        android:height="66dp"
-        android:drawable="@drawable/app_logo"
-        android:gravity="center" />
-</layer-list>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Camera body -->
+    <path
+        android:fillColor="#FFD180"
+        android:pathData="M38,30 L44,24 L64,24 L70,30 L78,30 C81.3,30 84,32.7 84,36 L84,74 C84,77.3 81.3,80 78,80 L30,80 C26.7,80 24,77.3 24,74 L24,36 C24,32.7 26.7,30 30,30 Z" />
+    <!-- Lens outer ring -->
+    <path
+        android:fillColor="#1A1C1E"
+        android:pathData="M54,40 C62.3,40 69,46.7 69,55 C69,63.3 62.3,70 54,70 C45.7,70 39,63.3 39,55 C39,46.7 45.7,40 54,40 Z" />
+    <!-- Lens inner center -->
+    <path
+        android:fillColor="#D49E3C"
+        android:pathData="M54,46 C59,46 63,50 63,55 C63,60 59,64 54,64 C49,64 45,60 45,55 C45,50 49,46 54,46 Z" />
+    <!-- Flash dot -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M74,38 A3,3 0 1,1 74,37.9 Z" />
+</vector>

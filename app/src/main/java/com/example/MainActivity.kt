@@ -10,6 +10,7 @@ import androidx.activity.viewModels
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
+import com.example.data.firebase.FirebaseConfig
 import com.example.ui.screens.MainScreen
 import com.example.ui.theme.StudioExpoTheme
 import com.example.ui.viewmodel.StudioViewModel
@@ -19,7 +20,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        com.example.data.firebase.FirebaseConfig.initialize(applicationContext)
+        FirebaseConfig.initialize(applicationContext)
         enableEdgeToEdge()
         handleIncomingIntent(intent)
         setContent {
@@ -55,4 +56,3 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
-

@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
@@ -31,6 +30,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
@@ -62,7 +62,6 @@ fun StudioTopBar(
                 .statusBarsPadding()
                 .padding(horizontal = 16.dp, vertical = 8.dp)
         ) {
-            // Main Branding Bar
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -112,7 +111,7 @@ fun StudioTopBar(
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.EditNote,
-                                    contentDescription = "Set WhatsApp Message Template (मैसेज टेम्पलेट सेट करें)",
+                                    contentDescription = "Set WhatsApp Message Template",
                                     tint = StudioAmber,
                                     modifier = Modifier.size(24.dp)
                                 )
@@ -126,7 +125,7 @@ fun StudioTopBar(
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Share,
-                                    contentDescription = "Share on WhatsApp (व्हाट्सएप शेयर)",
+                                    contentDescription = "Share on WhatsApp",
                                     tint = StatusFreeGreen,
                                     modifier = Modifier.size(20.dp)
                                 )
@@ -138,7 +137,7 @@ fun StudioTopBar(
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            // Dual Access Mode Switcher (Owner vs Customer)
+            // Role switcher
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -180,19 +179,20 @@ private fun RoleToggleButton(
     title: String,
     subtitle: String,
     isSelected: Boolean,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    icon: ImageVector,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val bgColor = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent
-    val contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+    val bgColor = if (isSelected) StudioAmber else Color.Transparent
+    val textColor = if (isSelected) Color.Black else MaterialTheme.colorScheme.onSurfaceVariant
+    val subtextColor = if (isSelected) Color(0xFF2E2400) else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
 
     Box(
         modifier = modifier
-            .clip(RoundedCornerShape(10.dp))
+            .clip(RoundedCornerShape(8.dp))
             .background(bgColor)
-            .clickable(onClick = onClick)
-            .padding(vertical = 6.dp, horizontal = 8.dp),
+            .clickable { onClick() }
+            .padding(vertical = 8.dp, horizontal = 10.dp),
         contentAlignment = Alignment.Center
     ) {
         Row(
@@ -202,21 +202,22 @@ private fun RoleToggleButton(
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = contentColor,
+                tint = textColor,
                 modifier = Modifier.size(16.dp)
             )
             Spacer(modifier = Modifier.width(6.dp))
-            Column(horizontalAlignment = Alignment.Start) {
+            Column {
                 Text(
                     text = title,
                     fontSize = 12.sp,
-                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                    color = contentColor
+                    fontWeight = FontWeight.Bold,
+                    color = textColor
                 )
                 Text(
                     text = subtitle,
-                    fontSize = 9.sp,
-                    color = contentColor.copy(alpha = 0.8f)
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Normal,
+                    color = subtextColor
                 )
             }
         }

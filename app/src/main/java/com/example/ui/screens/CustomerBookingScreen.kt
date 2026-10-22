@@ -2,16 +2,14 @@ package com.example.ui.screens
 
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -20,23 +18,22 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CameraAlt
-import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Event
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Message
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Notes
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material.icons.filled.Send
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -45,14 +42,14 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableDoubleStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -66,10 +63,8 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
 import com.example.R
 import com.example.data.local.DateUtils
 import com.example.data.model.BookingRequest
@@ -77,808 +72,439 @@ import com.example.data.model.DateStatus
 import com.example.data.model.StudioDateSlot
 import com.example.data.model.StudioProfile
 import com.example.data.model.WorkTypeCatalog
-import com.example.ui.components.StatusBadge
 import com.example.ui.components.StudioCalendarView
 import com.example.ui.theme.StatusBookedRed
 import com.example.ui.theme.StatusFreeGreen
-import com.example.ui.theme.StatusFreeGreenLight
 import com.example.ui.theme.StudioAmber
+import com.example.ui.theme.StudioCard
+import com.example.ui.theme.StudioSurface
+import com.example.ui.theme.TextLightPrimary
+import com.example.ui.theme.TextLightSecondary
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun CustomerBookingScreen(
     profile: StudioProfile?,
     year: Int,
     monthZeroIndexed: Int,
     dateSlots: List<StudioDateSlot>,
-    myRequests: List<BookingRequest>,
+    bookings: List<BookingRequest>,
     selectedDate: String?,
-    showSuccessDialog: Boolean,
+    bookingSuccessDialog: Boolean,
     onPreviousMonth: () -> Unit,
     onNextMonth: () -> Unit,
-    onSelectDate: (String) -> Unit,
-    onSubmitBooking: (dates: List<String>, name: String, phone: String, workType: String, amount: Double, location: String, notes: String) -> Unit,
-    onDismissSuccessDialog: () -> Unit,
-    onWhatsAppStudio: (phone: String, message: String) -> Unit,
-    onCallStudio: (phone: String) -> Unit,
+    onDateSelected: (String) -> Unit,
+    onSubmitBooking: (List<String>, String, String, String, Double, String, String) -> Unit,
+    onDismissSuccess: () -> Unit,
+    onWhatsAppDirect: (String, String) -> Unit,
+    onCallDirect: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    var selectedTab by remember { mutableIntStateOf(0) } // 0: Booking Form, 1: My Requests
+    val studio = profile ?: StudioProfile()
+    val perDayRate = studio.perDayRate
 
-    // Multi-date selection state (Allows selecting multiple dates together)
-    var selectedDates by remember {
-        mutableStateOf<Set<String>>(if (selectedDate != null) setOf(selectedDate) else emptySet())
-    }
+    // Multi-date selection for customer
+    var selectedDatesSet by remember { mutableStateOf(setOf<String>()) }
 
-    // Keep synced when external selectedDate changes
-    androidx.compose.runtime.LaunchedEffect(selectedDate) {
-        if (selectedDate != null && !selectedDates.contains(selectedDate)) {
-            selectedDates = selectedDates + selectedDate
+    // Synchronize with external selectedDate (e.g. from deep link)
+    LaunchedEffect(selectedDate) {
+        if (!selectedDate.isNullOrBlank()) {
+            selectedDatesSet = setOf(selectedDate)
         }
     }
 
-    // Per Day Rate set by Owner in StudioProfile
-    val perDayRate = profile?.perDayRate ?: 25000.0
-    val daysCount = if (selectedDates.isEmpty()) 1 else selectedDates.size
-
-    // Form inputs state
     var customerName by remember { mutableStateOf("") }
     var customerPhone by remember { mutableStateOf("") }
-    var selectedWorkType by remember { mutableStateOf(WorkTypeCatalog.allTypes.first()) }
-    var estimatedAmount by remember { mutableStateOf((perDayRate * daysCount).toInt().toString()) }
-    var venueLocation by remember { mutableStateOf("") }
-    var notesText by remember { mutableStateOf("") }
+    var selectedWorkType by remember { mutableStateOf("Wedding / લગ્ન") }
+    var eventLocation by remember { mutableStateOf("") }
+    var specialNotes by remember { mutableStateOf("") }
 
-    // Auto-update total estimated package whenever total selected days or owner's per-day price updates
-    androidx.compose.runtime.LaunchedEffect(selectedDates.size, perDayRate) {
-        val count = if (selectedDates.isEmpty()) 1 else selectedDates.size
-        estimatedAmount = (perDayRate * count).toInt().toString()
-    }
+    val daysCount = maxOf(1, selectedDatesSet.size)
+    val calculatedTotal = daysCount * perDayRate
 
-    val bookedDatesSummary = remember(selectedDates) {
-        if (selectedDates.isEmpty()) selectedDate ?: ""
-        else selectedDates.sorted().joinToString(", ") { DateUtils.formatForDisplay(it) }
-    }
-
-    // Success dialog
-    if (showSuccessDialog) {
-        CustomerSuccessDialog(
-            studioName = profile?.studioName ?: "Studio Expo",
-            photographerPhone = profile?.whatsapp ?: profile?.phone ?: "",
-            customerName = customerName,
-            bookedDatesText = bookedDatesSummary,
-            onDismiss = onDismissSuccessDialog,
-            onChatWhatsApp = {
-                val msg = "Hello ${profile?.studioName ?: "Studio Expo"}, I have submitted a booking request for $customerName for shoot dates: $bookedDatesSummary (${selectedWorkType.englishName}). Please review and confirm!"
-                onWhatsAppStudio(profile?.whatsapp ?: profile?.phone ?: "", msg)
-                onDismissSuccessDialog()
-            }
-        )
-    }
-
-    LazyColumn(
+    Column(
         modifier = modifier
             .fillMaxSize()
-            .testTag("customer_booking_screen"),
-        contentPadding = PaddingValues(16.dp),
+            .verticalScroll(rememberScrollState())
+            .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Public Studio Banner
-        item {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant
-                ),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-            ) {
-                Column(modifier = Modifier.padding(18.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(
-                                modifier = Modifier
-                                    .size(46.dp)
-                                    .clip(CircleShape)
-                                    .background(MaterialTheme.colorScheme.surface),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Image(
-                                    painter = painterResource(id = R.drawable.app_logo),
-                                    contentDescription = "Studio Logo",
-                                    contentScale = ContentScale.Crop,
-                                    modifier = Modifier
-                                        .size(46.dp)
-                                        .clip(CircleShape)
-                                )
-                            }
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Column {
-                                Text(
-                                    text = profile?.studioName ?: "Studio Expo",
-                                    fontSize = 20.sp,
-                                    fontWeight = FontWeight.ExtraBold,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                Text(
-                                    text = "By ${profile?.photographerName ?: "Photographer"} • 📍 ${profile?.city ?: "Gujarat"}",
-                                    fontSize = 12.sp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    Text(
-                        text = profile?.bio ?: "Professional Wedding, Pre-Wedding & Fashion Shoot",
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    // Contact studio buttons
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        Button(
-                            onClick = {
-                                val msg = "Hello ${profile?.studioName}, I am viewing your calendar and inquiring about shoot booking."
-                                onWhatsAppStudio(profile?.whatsapp ?: profile?.phone ?: "", msg)
-                            },
-                            shape = RoundedCornerShape(10.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = StatusFreeGreen),
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Message,
-                                contentDescription = null,
-                                tint = Color.White,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = "WhatsApp Studio",
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.White
-                            )
-                        }
-
-                        OutlinedButton(
-                            onClick = { onCallStudio(profile?.phone ?: "") },
-                            shape = RoundedCornerShape(10.dp),
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Phone,
-                                contentDescription = null,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("Call Studio", fontSize = 11.sp)
-                        }
-                    }
-                }
-            }
-        }
-
-        // Tabs: 0: Book Date, 1: My Requests
-        item {
-            TabRow(
-                selectedTabIndex = selectedTab,
-                containerColor = MaterialTheme.colorScheme.surface,
-                modifier = Modifier.clip(RoundedCornerShape(12.dp))
-            ) {
-                Tab(
-                    selected = selectedTab == 0,
-                    onClick = { selectedTab = 0 },
-                    text = { Text("📅 Select Date & Book", fontWeight = FontWeight.Bold) }
-                )
-                Tab(
-                    selected = selectedTab == 1,
-                    onClick = { selectedTab = 1 },
-                    text = {
-                        Text(
-                            text = "📋 My Requests (${myRequests.size})",
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                )
-            }
-        }
-
-        if (selectedTab == 0) {
-            // Instruction Card
-            item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(14.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = StudioAmber.copy(alpha = 0.12f)
-                    )
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Info,
-                            contentDescription = null,
-                            tint = StudioAmber,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Text(
-                            text = "🟢 Free and Open (⚪) dates can be booked. You can select multiple dates together! (🔴 Booked dates cannot be booked) / 🟢 Free और खुली तारीखें बुक कर सकते हैं। एक साथ कई तारीखें चुन सकते हैं!",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-                }
-            }
-
-            // Public Calendar
-            item {
-                StudioCalendarView(
-                    year = year,
-                    monthZeroIndexed = monthZeroIndexed,
-                    dateSlots = dateSlots,
-                    bookings = emptyList(), // Customers don't see others' private bookings
-                    selectedDate = if (selectedDates.isEmpty()) selectedDate else null,
-                    selectedDates = selectedDates,
-                    isOwnerMode = false,
-                    onPreviousMonth = onPreviousMonth,
-                    onNextMonth = onNextMonth,
-                    onDateClick = { isoDate, slot, isFree ->
-                        val isBooked = slot?.status == DateStatus.BOOKED.name
-                        if (isBooked) {
-                            Toast.makeText(
-                                context,
-                                "🔴 This date is already BOOKED! Please select Free (🟢) or Open (⚪) dates / यह तारीख पहले से बुक है। कृपया उपलब्ध तारीख चुनें।",
-                                Toast.LENGTH_LONG
-                            ).show()
-                        } else {
-                            // BOTH FREE (🟢) AND KHALI / OPEN (⚪) DATES CAN BE SELECTED & BOOKED!
-                            val currentSet = selectedDates.toMutableSet()
-                            if (currentSet.contains(isoDate)) {
-                                currentSet.remove(isoDate)
-                                selectedDates = currentSet
-                                if (currentSet.isEmpty()) {
-                                    onSelectDate("")
-                                } else {
-                                    onSelectDate(currentSet.last())
-                                }
-                                Toast.makeText(
-                                    context,
-                                    "Date unselected / तारीख हटाई गई: ${DateUtils.formatForDisplay(isoDate)}",
-                                    Toast.LENGTH_SHORT
-                                ).show()
-                            } else {
-                                currentSet.add(isoDate)
-                                selectedDates = currentSet
-                                onSelectDate(isoDate)
-                                val msg = if (isFree) {
-                                    "🟢 Free date selected: ${DateUtils.formatForDisplay(isoDate)}"
-                                } else {
-                                    "⚪ Open date selected: ${DateUtils.formatForDisplay(isoDate)}"
-                                }
-                                Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
-                            }
-                        }
-                    }
-                )
-            }
-
-            // Selected Dates Summary Bar & Chips (When 1 or more dates are selected)
-            if (selectedDates.isNotEmpty()) {
-                item {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant
-                        )
-                    ) {
-                        Column(modifier = Modifier.padding(14.dp)) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(10.dp)
-                                            .clip(CircleShape)
-                                            .background(StudioAmber)
-                                    )
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text(
-                                        text = "Selected Dates / चयनित तारीखें (${selectedDates.size} Selected):",
-                                        fontSize = 13.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    )
-                                }
-
-                                TextButton(
-                                    onClick = {
-                                        selectedDates = emptySet()
-                                        onSelectDate("")
-                                        Toast.makeText(context, "All selections cleared / सभी चयन साफ़ किए गए", Toast.LENGTH_SHORT).show()
-                                    },
-                                    contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp)
-                                ) {
-                                    Text(
-                                        text = "Clear / साफ़ करें",
-                                        fontSize = 11.sp,
-                                        color = MaterialTheme.colorScheme.error,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
-                            }
-
-                            Spacer(modifier = Modifier.height(8.dp))
-
-                            // Horizontal chips of all selected dates
-                            LazyRow(
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                items(selectedDates.toList().sorted()) { dateIso ->
-                                    val slot = dateSlots.find { it.dateStr == dateIso }
-                                    val isFree = slot?.status == DateStatus.FREE.name
-                                    Row(
-                                        modifier = Modifier
-                                            .clip(RoundedCornerShape(8.dp))
-                                            .background(
-                                                if (isFree) StatusFreeGreen.copy(alpha = 0.18f)
-                                                else MaterialTheme.colorScheme.surface
-                                            )
-                                            .border(
-                                                1.dp,
-                                                if (isFree) StatusFreeGreen else StudioAmber,
-                                                RoundedCornerShape(8.dp)
-                                            )
-                                            .padding(horizontal = 10.dp, vertical = 6.dp),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Text(
-                                            text = "${if (isFree) "🟢" else "⚪"} ${DateUtils.formatForDisplay(dateIso)}",
-                                            fontSize = 12.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = MaterialTheme.colorScheme.onSurface
-                                        )
-                                        Spacer(modifier = Modifier.width(6.dp))
-                                        Icon(
-                                            imageVector = Icons.Default.Close,
-                                            contentDescription = "Remove date",
-                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            modifier = Modifier
-                                                .size(14.dp)
-                                                .clickable {
-                                                    val newSet = selectedDates - dateIso
-                                                    selectedDates = newSet
-                                                    if (newSet.isEmpty()) onSelectDate("") else onSelectDate(newSet.last())
-                                                    Toast.makeText(context, "Date removed / तारीख हटाई गई: ${DateUtils.formatForDisplay(dateIso)}", Toast.LENGTH_SHORT).show()
-                                                }
-                                        )
-                                    }
-                                }
-                            }
-
-                            Spacer(modifier = Modifier.height(6.dp))
-                            Text(
-                                text = "💡 Tap dates on calendar to add or remove dates / कैलेंडर पर टैप करके तारीखें जोड़ें या हटाएं।",
-                                fontSize = 11.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                }
-            }
-
-            // Booking Form (Visible when at least 1 date is selected - both Free and Open/Khali dates)
-            if (selectedDates.isNotEmpty()) {
-                item {
-                    CustomerBookingFormCard(
-                        selectedDates = selectedDates,
-                        perDayRate = perDayRate,
-                        customerName = customerName,
-                        customerPhone = customerPhone,
-                        selectedWorkType = selectedWorkType,
-                        estimatedAmount = estimatedAmount,
-                        venueLocation = venueLocation,
-                        notesText = notesText,
-                        onNameChange = { customerName = it },
-                        onPhoneChange = { customerPhone = it },
-                        onWorkTypeSelect = { workType ->
-                            selectedWorkType = workType
-                            val count = if (selectedDates.isEmpty()) 1 else selectedDates.size
-                            estimatedAmount = (perDayRate * count).toInt().toString()
-                        },
-                        onAmountChange = { estimatedAmount = it },
-                        onLocationChange = { venueLocation = it },
-                        onNotesChange = { notesText = it },
-                        onSubmit = {
-                            val count = if (selectedDates.isEmpty()) 1 else selectedDates.size
-                            val amount = estimatedAmount.toDoubleOrNull() ?: (perDayRate * count)
-                            onSubmitBooking(
-                                selectedDates.toList().sorted(),
-                                customerName,
-                                customerPhone,
-                                selectedWorkType.displayName,
-                                amount,
-                                venueLocation,
-                                notesText
-                            )
-                        }
-                    )
-                }
-            } else {
-                item {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(20.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Text(
-                                text = "📅 Select 🟢 Free or Open (⚪) dates from Calendar / कैलेंडर से तारीखें चुनें",
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                textAlign = TextAlign.Center
-                            )
-                            Text(
-                                text = "You can select multiple dates together. Tap date to open booking form / एक साथ कई तारीखें चुन सकते हैं।",
-                                fontSize = 12.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                textAlign = TextAlign.Center,
-                                modifier = Modifier.padding(top = 4.dp)
-                            )
-                        }
-                    }
-                }
-            }
-        } else {
-            // Tab 1: Customer My Requests List
-            item {
-                Text(
-                    text = "My Booking Requests / मेरी बुकिंग अनुरोध (Submitted Requests)",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onBackground
-                )
-            }
-
-            if (myRequests.isEmpty()) {
-                item {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(24.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Text(
-                                text = "No requests submitted yet / अभी तक कोई अनुरोध नहीं भेजा गया है।",
-                                fontSize = 14.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Spacer(modifier = Modifier.height(10.dp))
-                            Button(
-                                onClick = { selectedTab = 0 },
-                                shape = RoundedCornerShape(10.dp)
-                            ) {
-                                Text("Book Dates / तारीखें बुक करें")
-                            }
-                        }
-                    }
-                }
-            } else {
-                items(myRequests) { req ->
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-                    ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = "📅 ${DateUtils.formatFullForDisplay(req.dateStr)}",
-                                    fontSize = 15.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                StatusBadge(status = req.status)
-                            }
-
-                            Spacer(modifier = Modifier.height(6.dp))
-                            Text(
-                                text = "📸 ${req.workType} • ₹${req.amount.toInt()}",
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = StudioAmber
-                            )
-
-                            if (req.location.isNotBlank()) {
-                                Text(
-                                    text = "📍 ${req.location}",
-                                    fontSize = 12.sp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-
-                            Spacer(modifier = Modifier.height(10.dp))
-
-                            // Status Explanation for Customer
-                            val statusExplanation = when (req.status) {
-                                "PENDING" -> "⏳ Request is pending with studio owner. Will be confirmed shortly / अनुरोध ओनर के पास पेंडिंग है।"
-                                "CONFIRMED" -> "🎉 Congratulations! Your booking is confirmed by studio owner / आपका बुकिंग कन्फर्म हो गया है!"
-                                "REJECTED" -> "❌ Request was not accepted for this date. Please select another date / अनुरोध अस्वीकृत हुआ।"
-                                else -> ""
-                            }
-
-                            Text(
-                                text = statusExplanation,
-                                fontSize = 11.sp,
-                                color = if (req.status == "CONFIRMED") StatusFreeGreen else MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun CustomerBookingFormCard(
-    selectedDates: Set<String>,
-    perDayRate: Double,
-    customerName: String,
-    customerPhone: String,
-    selectedWorkType: com.example.data.model.WorkType,
-    estimatedAmount: String,
-    venueLocation: String,
-    notesText: String,
-    onNameChange: (String) -> Unit,
-    onPhoneChange: (String) -> Unit,
-    onWorkTypeSelect: (com.example.data.model.WorkType) -> Unit,
-    onAmountChange: (String) -> Unit,
-    onLocationChange: (String) -> Unit,
-    onNotesChange: (String) -> Unit,
-    onSubmit: () -> Unit
-) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .testTag("customer_booking_form_card"),
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
+        // Hero Studio Branding Card
+        Card(
+            modifier = Modifier.fillMaxWidth().testTag("customer_hero_card"),
+            colors = CardDefaults.cardColors(containerColor = StudioCard),
+            shape = RoundedCornerShape(16.dp)
         ) {
-            // Selected Date Banner (Single or Multi-Date)
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(StatusFreeGreen.copy(alpha = 0.15f))
-                    .padding(12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Event,
-                    contentDescription = null,
-                    tint = StatusFreeGreen,
-                    modifier = Modifier.size(24.dp)
-                )
-                Spacer(modifier = Modifier.width(10.dp))
-                Column {
-                    Text(
-                        text = if (selectedDates.size > 1) {
-                            "Selected Dates / ${selectedDates.size} तारीखें चुनी गईं:"
-                        } else {
-                            "Selected Date / चुनी गई तारीख:"
-                        },
-                        fontSize = 11.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        text = if (selectedDates.size > 1) {
-                            selectedDates.sorted().joinToString(", ") { DateUtils.formatForDisplay(it) }
-                        } else {
-                            DateUtils.formatFullForDisplay(selectedDates.firstOrNull() ?: "")
-                        },
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = StatusFreeGreen
-                    )
-                }
-            }
-
-            // Customer Name
-            OutlinedTextField(
-                value = customerName,
-                onValueChange = onNameChange,
-                label = { Text("Your Full Name (आपका पूरा नाम) *") },
-                leadingIcon = {
-                    Icon(imageVector = Icons.Default.Person, contentDescription = null, tint = StudioAmber)
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag("input_customer_name"),
-                singleLine = true
-            )
-
-            // Mobile Number
-            OutlinedTextField(
-                value = customerPhone,
-                onValueChange = onPhoneChange,
-                label = { Text("Mobile / WhatsApp Number (फ़ोन नंबर) *") },
-                leadingIcon = {
-                    Icon(imageVector = Icons.Default.Phone, contentDescription = null, tint = StudioAmber)
-                },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag("input_customer_phone"),
-                singleLine = true
-            )
-
-            // Work / Exposure Type Selector
-            Text(
-                text = "📸 Event / Shoot Type (इवेंट का प्रकार):",
-                fontSize = 13.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-
-            LazyRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                items(WorkTypeCatalog.allTypes) { type ->
-                    val isSelected = selectedWorkType.id == type.id
+            Column(modifier = Modifier.padding(16.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Box(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(
-                                if (isSelected) StudioAmber else MaterialTheme.colorScheme.surfaceVariant
-                            )
-                            .clickable { onWorkTypeSelect(type) }
-                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                            .size(60.dp)
+                            .clip(CircleShape)
+                            .background(StudioSurface),
                         contentAlignment = Alignment.Center
                     ) {
+                        Image(
+                            painter = painterResource(id = R.drawable.app_logo),
+                            contentDescription = "Studio Logo",
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.size(60.dp).clip(CircleShape)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(14.dp))
+
+                    Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "${type.iconEmoji} ${type.englishName} (${type.hindiName})",
+                            text = studio.studioName,
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = TextLightPrimary
+                        )
+                        Text(
+                            text = studio.photographerName,
+                            fontSize = 13.sp,
+                            color = StudioAmber,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Text(
+                            text = "📍 ${studio.city}",
                             fontSize = 12.sp,
-                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                            color = if (isSelected) Color.Black else MaterialTheme.colorScheme.onSurface
+                            color = TextLightSecondary
                         )
                     }
                 }
-            }
 
-            // Amount / Budget
-            val days = if (selectedDates.isEmpty()) 1 else selectedDates.size
-            val calculatedTotal = (perDayRate * days).toInt()
-            OutlinedTextField(
-                value = estimatedAmount,
-                onValueChange = onAmountChange,
-                label = {
+                Spacer(modifier = Modifier.height(10.dp))
+
+                Text(
+                    text = studio.bio,
+                    fontSize = 12.sp,
+                    color = TextLightSecondary,
+                    lineHeight = 16.sp
+                )
+
+                if (studio.cameraGearDetails.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(6.dp))
                     Text(
-                        if (days > 1) "Total Estimated Package ($days Days × ₹${perDayRate.toInt()}/day) / कुल राशि (₹)"
-                        else "Total Estimated Package (1 Day × ₹${perDayRate.toInt()}) / कुल राशि (₹)"
-                    )
-                },
-                leadingIcon = {
-                    Text(
-                        text = "₹",
-                        fontWeight = FontWeight.Bold,
-                        color = StatusFreeGreen,
-                        fontSize = 18.sp,
-                        modifier = Modifier.padding(start = 12.dp)
-                    )
-                },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag("input_customer_amount"),
-                singleLine = true,
-                supportingText = {
-                    Text(
-                        text = "💰 Rate: ₹${perDayRate.toInt()} / Day • $days Day(s) = ₹$calculatedTotal / प्रति दिन दर ₹${perDayRate.toInt()} के आधार पर कुल पैकेज",
+                        text = "📸 ${studio.cameraGearDetails}",
                         fontSize = 11.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = StatusFreeGreen
+                        color = StudioAmber.copy(alpha = 0.9f)
                     )
                 }
-            )
 
-            // Venue Location
-            OutlinedTextField(
-                value = venueLocation,
-                onValueChange = onLocationChange,
-                label = { Text("Venue / City Location (स्थान / शहर)") },
-                placeholder = { Text("e.g. Shubh Banquet, Ahmedabad") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true
-            )
+                Spacer(modifier = Modifier.height(12.dp))
 
-            // Notes
-            OutlinedTextField(
-                value = notesText,
-                onValueChange = onNotesChange,
-                label = { Text("Special Requirements / Notes (विशेष आवश्यकताएं)") },
-                placeholder = { Text("e.g. Drone photography required, 2 days shoot") },
-                modifier = Modifier.fillMaxWidth(),
-                maxLines = 3
-            )
+                // Direct Contact buttons
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Button(
+                        onClick = { onCallDirect(studio.phone) },
+                        modifier = Modifier.weight(1f).testTag("customer_call_owner"),
+                        colors = ButtonDefaults.buttonColors(containerColor = StudioAmber),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Icon(Icons.Default.Call, contentDescription = null, tint = Color.Black, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Call Studio", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    }
 
-            Spacer(modifier = Modifier.height(6.dp))
+                    Button(
+                        onClick = {
+                            val msg = "Hello ${studio.photographerName}, I would like to inquire about booking a photoshoot with ${studio.studioName}."
+                            onWhatsAppDirect(studio.whatsapp, msg)
+                        },
+                        modifier = Modifier.weight(1f).testTag("customer_whatsapp_owner"),
+                        colors = ButtonDefaults.buttonColors(containerColor = StatusFreeGreen),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Text("💬 WhatsApp", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    }
+                }
+            }
+        }
 
-            // Submit Button
-            Button(
-                onClick = onSubmit,
-                shape = RoundedCornerShape(14.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = StatusFreeGreen),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(50.dp)
-                    .testTag("customer_book_date_btn")
+        // Pricing Rate Banner
+        Surface(
+            color = StudioAmber.copy(alpha = 0.15f),
+            shape = RoundedCornerShape(12.dp),
+            border = androidx.compose.foundation.BorderStroke(1.dp, StudioAmber.copy(alpha = 0.4f)),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Row(
+                modifier = Modifier.padding(12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Icon(
-                    imageVector = Icons.Default.CheckCircle,
-                    contentDescription = null,
-                    tint = Color.White,
-                    modifier = Modifier.size(20.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
+                Column {
+                    Text(
+                        text = "💎 Standard Daily Package Rate",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = StudioAmber
+                    )
+                    Text(
+                        text = "4K Cinematic Video • High-Res Photos • Drone",
+                        fontSize = 11.sp,
+                        color = TextLightSecondary
+                    )
+                }
                 Text(
-                    text = if (selectedDates.size > 1) {
-                        "BOOK ${selectedDates.size} DATES / तारीखें बुक करें 🚀"
-                    } else {
-                        "BOOK DATE / तारीख बुक करें 🚀"
-                    },
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
+                    text = "₹${perDayRate.toLong()} / day",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = TextLightPrimary
                 )
             }
         }
+
+        // Calendar Section
+        Column {
+            Text(
+                text = "📅 Check Availability & Select Your Date(s)",
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
+                color = TextLightPrimary
+            )
+            Text(
+                text = "Green = Available (FREE) • Red = Already Booked",
+                fontSize = 12.sp,
+                color = TextLightSecondary
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            StudioCalendarView(
+                year = year,
+                monthZeroIndexed = monthZeroIndexed,
+                dateSlots = dateSlots,
+                bookings = bookings,
+                selectedDate = null,
+                selectedDates = selectedDatesSet,
+                isOwnerMode = false,
+                onPreviousMonth = onPreviousMonth,
+                onNextMonth = onNextMonth,
+                onDateClick = { dateIso, slot, _ ->
+                    if (slot?.status == DateStatus.BOOKED) {
+                        Toast.makeText(context, "This date is already booked! Please select another date.", Toast.LENGTH_SHORT).show()
+                    } else {
+                        val current = selectedDatesSet.toMutableSet()
+                        if (current.contains(dateIso)) {
+                            current.remove(dateIso)
+                        } else {
+                            current.add(dateIso)
+                        }
+                        selectedDatesSet = current
+                        onDateSelected(dateIso)
+                    }
+                }
+            )
+        }
+
+        // Booking Inquiry Form Card
+        Card(
+            modifier = Modifier.fillMaxWidth().testTag("customer_inquiry_form"),
+            colors = CardDefaults.cardColors(containerColor = StudioCard),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    text = "📝 Booking Inquiry Form",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = StudioAmber
+                )
+
+                // Selected dates display & package calculation
+                if (selectedDatesSet.isNotEmpty()) {
+                    Surface(
+                        color = StudioSurface,
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(10.dp)) {
+                            Text(
+                                text = "Selected Dates (${selectedDatesSet.size} Day${if (selectedDatesSet.size > 1) "s" else ""}):",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = StudioAmber
+                            )
+                            Text(
+                                text = selectedDatesSet.sorted().joinToString(", ") { DateUtils.formatForDisplay(it) },
+                                fontSize = 12.sp,
+                                color = TextLightPrimary
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "Estimated Package: ₹${calculatedTotal.toLong()} (₹${perDayRate.toLong()} × $daysCount days)",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = StatusFreeGreen
+                            )
+                        }
+                    }
+                } else {
+                    Text(
+                        text = "👉 Please tap one or more dates on the calendar above to begin.",
+                        fontSize = 12.sp,
+                        color = StudioAmber
+                    )
+                }
+
+                OutlinedTextField(
+                    value = customerName,
+                    onValueChange = { customerName = it },
+                    label = { Text("Your Full Name / પૂરું નામ") },
+                    leadingIcon = { Icon(Icons.Default.Person, contentDescription = null, tint = StudioAmber) },
+                    modifier = Modifier.fillMaxWidth().testTag("input_customer_name"),
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = StudioAmber,
+                        cursorColor = StudioAmber
+                    )
+                )
+
+                OutlinedTextField(
+                    value = customerPhone,
+                    onValueChange = { customerPhone = it },
+                    label = { Text("Mobile Number / મોબાઈલ નંબર") },
+                    leadingIcon = { Icon(Icons.Default.Phone, contentDescription = null, tint = StudioAmber) },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                    modifier = Modifier.fillMaxWidth().testTag("input_customer_phone"),
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = StudioAmber,
+                        cursorColor = StudioAmber
+                    )
+                )
+
+                // Work Type Selection
+                Text(
+                    text = "Event / Photography Type",
+                    fontSize = 12.sp,
+                    color = TextLightSecondary
+                )
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    for (workType in WorkTypeCatalog.allTypes) {
+                        val isSelected = selectedWorkType == workType.displayName
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = if (isSelected) StudioAmber else StudioSurface,
+                            modifier = Modifier.clickable { selectedWorkType = workType.displayName }
+                        ) {
+                            Text(
+                                text = "${workType.iconEmoji} ${workType.englishName}",
+                                fontSize = 11.sp,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                color = if (isSelected) Color.Black else TextLightPrimary,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            )
+                        }
+                    }
+                }
+
+                OutlinedTextField(
+                    value = eventLocation,
+                    onValueChange = { eventLocation = it },
+                    label = { Text("Venue / Event Location / સ્થળ") },
+                    leadingIcon = { Icon(Icons.Default.LocationOn, contentDescription = null, tint = StudioAmber) },
+                    modifier = Modifier.fillMaxWidth().testTag("input_customer_location"),
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = StudioAmber,
+                        cursorColor = StudioAmber
+                    )
+                )
+
+                OutlinedTextField(
+                    value = specialNotes,
+                    onValueChange = { specialNotes = it },
+                    label = { Text("Special Requirements / વિગતો (Optional)") },
+                    leadingIcon = { Icon(Icons.Default.Notes, contentDescription = null, tint = StudioAmber) },
+                    modifier = Modifier.fillMaxWidth().testTag("input_customer_notes"),
+                    minLines = 2,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = StudioAmber,
+                        cursorColor = StudioAmber
+                    )
+                )
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Button(
+                    onClick = {
+                        if (selectedDatesSet.isEmpty()) {
+                            Toast.makeText(context, "Please select at least one date from the calendar!", Toast.LENGTH_SHORT).show()
+                            return@Button
+                        }
+                        if (customerName.isBlank()) {
+                            Toast.makeText(context, "Please enter your name!", Toast.LENGTH_SHORT).show()
+                            return@Button
+                        }
+                        if (customerPhone.isBlank() || customerPhone.length < 10) {
+                            Toast.makeText(context, "Please enter a valid 10-digit mobile number!", Toast.LENGTH_SHORT).show()
+                            return@Button
+                        }
+
+                        onSubmitBooking(
+                            selectedDatesSet.sorted(),
+                            customerName.trim(),
+                            customerPhone.trim(),
+                            selectedWorkType,
+                            calculatedTotal,
+                            eventLocation.trim(),
+                            specialNotes.trim()
+                        )
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(50.dp)
+                        .testTag("submit_customer_booking"),
+                    colors = ButtonDefaults.buttonColors(containerColor = StudioAmber),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Icon(Icons.Default.Send, contentDescription = null, tint = Color.Black)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Send Booking Request",
+                        color = Color.Black,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 15.sp
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+    }
+
+    // Booking Success Dialog
+    if (bookingSuccessDialog) {
+        CustomerSuccessDialog(
+            studioName = studio.studioName,
+            photographerPhone = studio.phone,
+            photographerWhatsApp = studio.whatsapp,
+            customerName = customerName,
+            onDismiss = onDismissSuccess,
+            onWhatsApp = {
+                val datesSummary = selectedDatesSet.sorted().joinToString(", ") { DateUtils.formatForDisplay(it) }
+                val msg = "Hello ${studio.photographerName}, I ($customerName) just submitted a booking request for $datesSummary ($selectedWorkType) with ${studio.studioName}!"
+                onWhatsAppDirect(studio.whatsapp, msg)
+            }
+        )
     }
 }
 
@@ -886,122 +512,56 @@ private fun CustomerBookingFormCard(
 private fun CustomerSuccessDialog(
     studioName: String,
     photographerPhone: String,
+    photographerWhatsApp: String,
     customerName: String,
-    bookedDatesText: String,
     onDismiss: () -> Unit,
-    onChatWhatsApp: () -> Unit
+    onWhatsApp: () -> Unit
 ) {
-    Dialog(onDismissRequest = onDismiss) {
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .testTag("customer_success_dialog"),
-            shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(64.dp)
-                        .clip(CircleShape)
-                        .background(StatusFreeGreenLight),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.CheckCircle,
-                        contentDescription = "Success",
-                        tint = StatusFreeGreen,
-                        modifier = Modifier.size(36.dp)
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Text(
-                    text = "✅ Booking Request Sent!",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    textAlign = TextAlign.Center
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Default.CheckCircle,
+                    contentDescription = null,
+                    tint = StatusFreeGreen,
+                    modifier = Modifier.size(24.dp)
                 )
-
-                Text(
-                    text = "बुकिंग अनुरोध सफलतापूर्वक भेजा गया (Request Sent)",
-                    fontSize = 13.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(top = 4.dp)
-                )
-
-                if (bookedDatesText.isNotBlank()) {
-                    Spacer(modifier = Modifier.height(10.dp))
-                    Card(
-                        colors = CardDefaults.cardColors(containerColor = StatusFreeGreen.copy(alpha = 0.12f)),
-                        shape = RoundedCornerShape(10.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(
-                            text = "📅 Dates: $bookedDatesText",
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = StatusFreeGreen,
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.fillMaxWidth().padding(10.dp)
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(14.dp))
-
-                Text(
-                    text = "Your request has been received by $studioName. The owner will confirm shortly / आपका अनुरोध $studioName को प्राप्त हो गया है।",
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    textAlign = TextAlign.Center
-                )
-
-                Spacer(modifier = Modifier.height(20.dp))
-
-                // WhatsApp direct confirmation button
-                Button(
-                    onClick = onChatWhatsApp,
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = StatusFreeGreen),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .testTag("customer_whatsapp_owner_btn")
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Message,
-                        contentDescription = null,
-                        tint = Color.White,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "Message Studio on WhatsApp (व्हाट्सएप पर मैसेज करें) 📲",
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(10.dp))
-
-                OutlinedButton(
-                    onClick = onDismiss,
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("OK / ठीक है", fontSize = 13.sp)
-                }
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Booking Request Sent!", fontWeight = FontWeight.Bold)
             }
-        }
-    }
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    text = "Thank you $customerName! Your booking inquiry has been received by $studioName.",
+                    fontSize = 13.sp,
+                    color = TextLightPrimary
+                )
+                Text(
+                    text = "The photographer will review the request and get back to you shortly. You can also chat directly on WhatsApp for instant confirmation.",
+                    fontSize = 12.sp,
+                    color = TextLightSecondary
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    onWhatsApp()
+                    onDismiss()
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = StatusFreeGreen)
+            ) {
+                Text("Chat on WhatsApp", color = Color.Black, fontWeight = FontWeight.Bold)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Done", color = TextLightSecondary)
+            }
+        },
+        containerColor = StudioCard,
+        shape = RoundedCornerShape(16.dp)
+    )
 }

@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -18,14 +19,15 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -38,12 +40,16 @@ import androidx.compose.ui.unit.sp
 import com.example.data.local.CalendarDay
 import com.example.data.local.DateUtils
 import com.example.data.model.BookingRequest
+import com.example.data.model.BookingStatus
 import com.example.data.model.DateStatus
 import com.example.data.model.StudioDateSlot
 import com.example.ui.theme.StatusBookedRed
 import com.example.ui.theme.StatusFreeGreen
-import com.example.ui.theme.StatusPendingAmber
+import com.example.ui.theme.StatusRequestYellow
 import com.example.ui.theme.StudioAmber
+import com.example.ui.theme.StudioCard
+import com.example.ui.theme.TextLightPrimary
+import com.example.ui.theme.TextLightSecondary
 
 @Composable
 fun StudioCalendarView(
@@ -56,46 +62,40 @@ fun StudioCalendarView(
     isOwnerMode: Boolean,
     onPreviousMonth: () -> Unit,
     onNextMonth: () -> Unit,
-    onDateClick: (String, StudioDateSlot?, Boolean) -> Unit, // iso, slot, isFree
+    onDateClick: (String, StudioDateSlot?, Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val days = remember(year, monthZeroIndexed) {
-        DateUtils.generateMonthDays(year, monthZeroIndexed)
-    }
+    val monthYearTitle = DateUtils.getMonthYearDisplay(year, monthZeroIndexed)
+    val days = DateUtils.getDaysInMonth(year, monthZeroIndexed)
 
-    val slotsByDate = remember(dateSlots) {
-        dateSlots.associateBy { it.dateStr }
-    }
+    // Calculate month stats
+    val slotMap = dateSlots.associateBy { it.dateStr }
+    val pendingByDate = bookings.filter { it.status == BookingStatus.PENDING }
+        .groupBy { it.dateStr }
 
-    val pendingCountByDate = remember(bookings) {
-        bookings.filter { it.status == "PENDING" }.groupingBy { it.dateStr }.eachCount()
-    }
+    var freeCount = 0
+    var bookedCount = 0
+    var requestCount = 0
 
-    // Live counts
-    val freeCount = remember(dateSlots) {
-        dateSlots.count { it.status == DateStatus.FREE.name }
-    }
-    val bookedCount = remember(dateSlots) {
-        dateSlots.count { it.status == DateStatus.BOOKED.name }
-    }
-    val requestCount = remember(dateSlots, bookings) {
-        val slotRequests = dateSlots.count { it.status == DateStatus.REQUEST.name }
-        val pendingBookingsCount = bookings.count { it.status == "PENDING" }
-        maxOf(slotRequests, pendingBookingsCount)
+    for (day in days) {
+        if (!day.isCurrentMonth) continue
+        val slot = slotMap[day.dateIso]
+        val pending = pendingByDate[day.dateIso]?.size ?: 0
+        if (slot?.status == DateStatus.FREE) freeCount++
+        if (slot?.status == DateStatus.BOOKED) bookedCount++
+        if (pending > 0 || slot?.status == DateStatus.REQUEST) requestCount++
     }
 
     Card(
         modifier = modifier
             .fillMaxWidth()
             .testTag("studio_calendar_card"),
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        colors = CardDefaults.cardColors(containerColor = StudioCard),
+        shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            // Month Header with Nav Arrows
+            // Month navigation header
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -103,128 +103,48 @@ fun StudioCalendarView(
             ) {
                 IconButton(
                     onClick = onPreviousMonth,
-                    modifier = Modifier.testTag("cal_prev_month_btn")
+                    modifier = Modifier.testTag("cal_prev_month")
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Previous Month",
-                        tint = MaterialTheme.colorScheme.primary
+                        tint = StudioAmber
                     )
                 }
 
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = DateUtils.getMonthYearEnLabel(year, monthZeroIndexed),
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        text = DateUtils.getMonthYearLabel(year, monthZeroIndexed).split(" ")[0],
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+                Text(
+                    text = monthYearTitle,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextLightPrimary
+                )
 
                 IconButton(
                     onClick = onNextMonth,
-                    modifier = Modifier.testTag("cal_next_month_btn")
+                    modifier = Modifier.testTag("cal_next_month")
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                         contentDescription = "Next Month",
-                        tint = MaterialTheme.colorScheme.primary
+                        tint = StudioAmber
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Day of Week Header
-            val dayHeaders = listOf("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat")
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceAround
-            ) {
-                dayHeaders.forEach { dayName ->
-                    Text(
-                        text = dayName,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = if (dayName == "Sun") StatusBookedRed.copy(alpha = 0.8f) else MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.width(36.dp),
-                        textAlign = TextAlign.Center
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Days Grid
-            val weeks = days.chunked(7)
-            weeks.forEach { week ->
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 3.dp),
-                    horizontalArrangement = Arrangement.SpaceAround
-                ) {
-                    week.forEach { day ->
-                        val slot = slotsByDate[day.isoDate]
-                        val pendingCount = pendingCountByDate[day.isoDate] ?: 0
-                        val isSelected = if (selectedDates.isNotEmpty()) {
-                            selectedDates.contains(day.isoDate)
-                        } else {
-                            day.isoDate == selectedDate
-                        }
-                        val isFree = slot?.status == DateStatus.FREE.name
-                        val isBooked = slot?.status == DateStatus.BOOKED.name
-                        val isRequest = slot?.status == DateStatus.REQUEST.name || (pendingCount > 0)
-
-                        CalendarDayCell(
-                            day = day,
-                            slot = slot,
-                            isFree = isFree,
-                            isBooked = isBooked,
-                            isRequest = isRequest,
-                            pendingCount = pendingCount,
-                            isSelected = isSelected,
-                            isOwnerMode = isOwnerMode,
-                            onClick = {
-                                onDateClick(day.isoDate, slot, isFree)
-                            }
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // LIVE COUNTING ROW: FREE DATE, BOOKED, REQUEST COUNTING RIGHT BELOW
+            // Stats summary row
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f))
-                    .padding(horizontal = 8.dp, vertical = 10.dp),
-                horizontalArrangement = Arrangement.SpaceAround,
-                verticalAlignment = Alignment.CenterVertically
+                    .padding(vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly
             ) {
                 CountingItem(
                     emoji = "🟢",
-                    title = "Free",
+                    title = "Available",
                     hindiTitle = "उपलब्ध",
                     count = freeCount,
                     color = StatusFreeGreen
                 )
-
-                Box(
-                    modifier = Modifier
-                        .height(24.dp)
-                        .width(1.dp)
-                        .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f))
-                )
-
                 CountingItem(
                     emoji = "🔴",
                     title = "Booked",
@@ -232,21 +152,84 @@ fun StudioCalendarView(
                     count = bookedCount,
                     color = StatusBookedRed
                 )
-
-                Box(
-                    modifier = Modifier
-                        .height(24.dp)
-                        .width(1.dp)
-                        .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f))
-                )
-
                 CountingItem(
                     emoji = "🟡",
-                    title = "Request",
+                    title = "Requests",
                     hindiTitle = "अनुरोध",
                     count = requestCount,
-                    color = StatusPendingAmber
+                    color = StatusRequestYellow
                 )
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Weekday labels
+            val weekDays = listOf("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat")
+            Row(modifier = Modifier.fillMaxWidth()) {
+                weekDays.forEach { dayName ->
+                    Text(
+                        text = dayName,
+                        modifier = Modifier.weight(1f),
+                        textAlign = TextAlign.Center,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = if (dayName == "Sun") StudioAmber else TextLightSecondary
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Days grid (chunks of 7)
+            val rows = days.chunked(7)
+            for (row in rows) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 3.dp),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    for (day in row) {
+                        if (!day.isCurrentMonth || day.day == 0) {
+                            Box(modifier = Modifier.weight(1f).aspectRatio(1f))
+                        } else {
+                            val slot = slotMap[day.dateIso]
+                            val isFree = slot?.status == DateStatus.FREE
+                            val isBooked = slot?.status == DateStatus.BOOKED
+                            val pendingList = pendingByDate[day.dateIso]
+                            val pendingCount = pendingList?.size ?: 0
+                            val isRequest = pendingCount > 0 || slot?.status == DateStatus.REQUEST
+
+                            val isSelected = if (isOwnerMode && selectedDates.isNotEmpty()) {
+                                selectedDates.contains(day.dateIso)
+                            } else {
+                                selectedDate == day.dateIso
+                            }
+
+                            Box(modifier = Modifier.weight(1f)) {
+                                CalendarDayCell(
+                                    day = day,
+                                    slot = slot,
+                                    isFree = isFree,
+                                    isBooked = isBooked,
+                                    isRequest = isRequest,
+                                    pendingCount = pendingCount,
+                                    isSelected = isSelected,
+                                    isOwnerMode = isOwnerMode,
+                                    onClick = {
+                                        onDateClick(day.dateIso, slot, isSelected)
+                                    }
+                                )
+                            }
+                        }
+                    }
+                    // Fill remaining empty cells in row
+                    if (row.size < 7) {
+                        for (i in row.size until 7) {
+                            Box(modifier = Modifier.weight(1f).aspectRatio(1f))
+                        }
+                    }
+                }
             }
         }
     }
@@ -260,34 +243,24 @@ private fun CountingItem(
     count: Int,
     color: Color
 ) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Box(
-            modifier = Modifier
-                .size(8.dp)
-                .clip(CircleShape)
-                .background(color)
-        )
-        Spacer(modifier = Modifier.width(6.dp))
-        Column(horizontalAlignment = Alignment.Start) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+    Surface(
+        color = color.copy(alpha = 0.12f),
+        shape = RoundedCornerShape(8.dp),
+        border = androidx.compose.foundation.BorderStroke(1.dp, color.copy(alpha = 0.3f))
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(text = "$emoji ", fontSize = 11.sp)
+            Column {
                 Text(
-                    text = "$title: ",
+                    text = "$count $title",
                     fontSize = 11.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Text(
-                    text = count.toString(),
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.ExtraBold,
+                    fontWeight = FontWeight.Bold,
                     color = color
                 )
             }
-            Text(
-                text = hindiTitle,
-                fontSize = 9.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
         }
     }
 }
@@ -304,44 +277,37 @@ private fun CalendarDayCell(
     isOwnerMode: Boolean,
     onClick: () -> Unit
 ) {
-    val isToday = day.isoDate == DateUtils.todayIso()
-
-    val cellBackground = when {
-        isSelected -> StudioAmber.copy(alpha = 0.25f)
-        isFree -> StatusFreeGreen.copy(alpha = 0.15f)
-        isBooked -> StatusBookedRed.copy(alpha = 0.14f)
-        isRequest -> StatusPendingAmber.copy(alpha = 0.18f)
+    val backgroundColor = when {
+        isSelected -> StudioAmber.copy(alpha = 0.35f)
+        isBooked -> StatusBookedRed.copy(alpha = 0.22f)
+        isFree -> StatusFreeGreen.copy(alpha = 0.22f)
+        isRequest -> StatusRequestYellow.copy(alpha = 0.22f)
         else -> Color.Transparent
     }
 
-    val cellBorderModifier = when {
-        isSelected -> Modifier.border(2.dp, StudioAmber, RoundedCornerShape(10.dp))
-        isFree -> Modifier.border(1.dp, StatusFreeGreen.copy(alpha = 0.7f), RoundedCornerShape(10.dp))
-        isBooked -> Modifier.border(1.dp, StatusBookedRed.copy(alpha = 0.5f), RoundedCornerShape(10.dp))
-        isRequest -> Modifier.border(1.dp, StatusPendingAmber.copy(alpha = 0.8f), RoundedCornerShape(10.dp))
-        isToday -> Modifier.border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f), RoundedCornerShape(10.dp))
-        else -> Modifier
-    }
-
-    val textColor = when {
-        !day.isCurrentMonth -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
-        isFree -> StatusFreeGreen
-        isBooked -> StatusBookedRed
-        isRequest -> StatusPendingAmber
-        day.isPast -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-        else -> MaterialTheme.colorScheme.onSurface
+    val borderColor = when {
+        isSelected -> StudioAmber
+        isBooked -> StatusBookedRed.copy(alpha = 0.7f)
+        isFree -> StatusFreeGreen.copy(alpha = 0.7f)
+        isRequest -> StatusRequestYellow.copy(alpha = 0.7f)
+        else -> Color.Transparent
     }
 
     Box(
         modifier = Modifier
-            .size(44.dp)
-            .clip(RoundedCornerShape(10.dp))
-            .background(cellBackground)
-            .then(cellBorderModifier)
-            .clickable(enabled = day.isCurrentMonth && (!day.isPast || isOwnerMode)) {
-                onClick()
-            }
-            .padding(2.dp),
+            .aspectRatio(1f)
+            .padding(2.dp)
+            .clip(RoundedCornerShape(8.dp))
+            .background(backgroundColor)
+            .then(
+                if (borderColor != Color.Transparent) {
+                    Modifier.border(1.5.dp, borderColor, RoundedCornerShape(8.dp))
+                } else {
+                    Modifier
+                }
+            )
+            .clickable(onClick = onClick)
+            .testTag("day_cell_${day.dateIso}"),
         contentAlignment = Alignment.Center
     ) {
         Column(
@@ -349,48 +315,54 @@ private fun CalendarDayCell(
             verticalArrangement = Arrangement.Center
         ) {
             Text(
-                text = day.dayOfMonth.toString(),
-                fontSize = 14.sp,
-                fontWeight = if (isFree || isBooked || isRequest || isSelected) FontWeight.Bold else FontWeight.Normal,
-                color = textColor,
-                textAlign = TextAlign.Center
+                text = day.day.toString(),
+                fontSize = 13.sp,
+                fontWeight = if (isSelected || isFree || isBooked || isRequest) FontWeight.Bold else FontWeight.Normal,
+                color = when {
+                    isSelected -> StudioAmber
+                    isBooked -> StatusBookedRed
+                    isFree -> StatusFreeGreen
+                    isRequest -> StatusRequestYellow
+                    else -> TextLightPrimary
+                }
             )
 
-            // Status Indicator Dot
-            Row(
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                if (isSelected) {
-                    Box(
-                        modifier = Modifier
-                            .size(5.dp)
-                            .clip(CircleShape)
-                            .background(StudioAmber)
+            // Status indicator dot or badge
+            when {
+                isSelected && isOwnerMode -> {
+                    Icon(
+                        imageVector = Icons.Default.Check,
+                        contentDescription = "Selected",
+                        modifier = Modifier.size(10.dp),
+                        tint = StudioAmber
                     )
-                    Spacer(modifier = Modifier.width(3.dp))
                 }
-                if (isFree) {
-                    Box(
-                        modifier = Modifier
-                            .size(5.dp)
-                            .clip(CircleShape)
-                            .background(StatusFreeGreen)
-                    )
-                } else if (isBooked) {
+                isBooked -> {
                     Box(
                         modifier = Modifier
                             .size(5.dp)
                             .clip(CircleShape)
                             .background(StatusBookedRed)
                     )
-                } else if (isRequest) {
+                }
+                isFree -> {
                     Box(
                         modifier = Modifier
                             .size(5.dp)
                             .clip(CircleShape)
-                            .background(StatusPendingAmber)
+                            .background(StatusFreeGreen)
                     )
+                }
+                isRequest -> {
+                    Box(
+                        modifier = Modifier
+                            .size(5.dp)
+                            .clip(CircleShape)
+                            .background(StatusRequestYellow)
+                    )
+                }
+                else -> {
+                    Spacer(modifier = Modifier.height(5.dp))
                 }
             }
         }

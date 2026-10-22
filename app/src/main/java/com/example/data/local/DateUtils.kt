@@ -2,172 +2,73 @@ package com.example.data.local
 
 import java.text.SimpleDateFormat
 import java.util.Calendar
-import java.util.Date
 import java.util.Locale
 
 object DateUtils {
-    private val isoFormat = SimpleDateFormat("yyyy-MM-dd", Locale.US)
-    private val displayFormat = SimpleDateFormat("dd MMM yyyy", Locale.US)
-    private val dayOfWeekFormat = SimpleDateFormat("EEE", Locale.US)
-    private val fullDayFormat = SimpleDateFormat("EEEE, dd MMMM yyyy", Locale.US)
-    private val monthYearFormat = SimpleDateFormat("MMMM yyyy", Locale.US)
+    private val isoFormat = SimpleDateFormat("yyyy-MM-dd", Locale.ENGLISH)
+    private val displayFormat = SimpleDateFormat("dd MMM yyyy", Locale.ENGLISH)
+    private val dayOfWeekFormat = SimpleDateFormat("EEEE", Locale.ENGLISH)
+    private val monthYearFormat = SimpleDateFormat("MMMM yyyy", Locale.ENGLISH)
 
-    private val hindiMonths = mapOf(
-        0 to "जनवरी (January)",
-        1 to "फ़रवरी (February)",
-        2 to "मार्च (March)",
-        3 to "अप्रैल (April)",
-        4 to "मई (May)",
-        5 to "जून (June)",
-        6 to "जुलाई (July)",
-        7 to "अगस्त (August)",
-        8 to "सितंबर (September)",
-        9 to "अक्टूबर (October)",
-        10 to "नवंबर (November)",
-        11 to "दिसंबर (December)"
-    )
-
-    fun todayIso(): String {
-        return isoFormat.format(Date())
-    }
-
-    fun formatToIso(calendar: Calendar): String {
-        return isoFormat.format(calendar.time)
-    }
-
-    fun parseIso(isoStr: String): Date? {
+    fun formatForDisplay(isoDate: String): String {
         return try {
-            isoFormat.parse(isoStr)
+            val date = isoFormat.parse(isoDate) ?: return isoDate
+            displayFormat.format(date)
         } catch (e: Exception) {
-            null
+            isoDate
         }
     }
 
-    fun formatForDisplay(isoStr: String): String {
-        val date = parseIso(isoStr) ?: return isoStr
-        return displayFormat.format(date)
+    fun getDayOfWeek(isoDate: String): String {
+        return try {
+            val date = isoFormat.parse(isoDate) ?: return ""
+            dayOfWeekFormat.format(date)
+        } catch (e: Exception) {
+            ""
+        }
     }
 
-    fun formatFullForDisplay(isoStr: String): String {
-        val date = parseIso(isoStr) ?: return isoStr
-        return fullDayFormat.format(date)
-    }
-
-    fun getDayOfWeek(isoStr: String): String {
-        val date = parseIso(isoStr) ?: return ""
-        return dayOfWeekFormat.format(date)
-    }
-
-    fun getMonthYearLabel(year: Int, monthZeroIndexed: Int): String {
-        val hindiMonth = hindiMonths[monthZeroIndexed] ?: ""
-        return "$hindiMonth $year"
-    }
-
-    fun getMonthYearEnLabel(year: Int, monthZeroIndexed: Int): String {
+    fun getMonthYearDisplay(year: Int, month: Int): String {
         val cal = Calendar.getInstance().apply {
             set(Calendar.YEAR, year)
-            set(Calendar.MONTH, monthZeroIndexed)
+            set(Calendar.MONTH, month)
             set(Calendar.DAY_OF_MONTH, 1)
         }
         return monthYearFormat.format(cal.time)
     }
 
-    /**
-     * Generates a 35 or 42 grid of calendar days for a given year and month (0-11).
-     * Returns list of CalendarDay objects.
-     */
-    fun generateMonthDays(year: Int, monthZeroIndexed: Int): List<CalendarDay> {
-        val days = mutableListOf<CalendarDay>()
+    fun toIsoDate(year: Int, month: Int, day: Int): String {
+        return String.format(Locale.ENGLISH, "%04d-%02d-%02d", year, month + 1, day)
+    }
 
+    fun getDaysInMonth(year: Int, month: Int): List<CalendarDay> {
         val cal = Calendar.getInstance().apply {
             set(Calendar.YEAR, year)
-            set(Calendar.MONTH, monthZeroIndexed)
+            set(Calendar.MONTH, month)
             set(Calendar.DAY_OF_MONTH, 1)
-            set(Calendar.HOUR_OF_DAY, 0)
-            set(Calendar.MINUTE, 0)
-            set(Calendar.SECOND, 0)
-            set(Calendar.MILLISECOND, 0)
         }
-
-        // 1 = Sunday, 2 = Monday, ... 7 = Saturday
-        val firstDayOfWeek = cal.get(Calendar.DAY_OF_WEEK)
-        // Adjust for Sunday = 0 padding, or Monday = 0 padding. Let's use Sunday first (0 to 6)
-        val leadingPaddingDays = firstDayOfWeek - 1
-
-        // Add padding from previous month
-        val prevCal = (cal.clone() as Calendar).apply {
-            add(Calendar.DAY_OF_MONTH, -leadingPaddingDays)
-        }
-        for (i in 0 until leadingPaddingDays) {
-            val iso = isoFormat.format(prevCal.time)
-            days.add(
-                CalendarDay(
-                    isoDate = iso,
-                    dayOfMonth = prevCal.get(Calendar.DAY_OF_MONTH),
-                    isCurrentMonth = false,
-                    isPast = isDateInPast(prevCal)
-                )
-            )
-            prevCal.add(Calendar.DAY_OF_MONTH, 1)
-        }
-
-        // Add current month days
+        val firstDayOfWeek = cal.get(Calendar.DAY_OF_WEEK) // 1 = Sunday
         val maxDays = cal.getActualMaximum(Calendar.DAY_OF_MONTH)
-        for (day in 1..maxDays) {
-            cal.set(Calendar.DAY_OF_MONTH, day)
-            val iso = isoFormat.format(cal.time)
-            days.add(
-                CalendarDay(
-                    isoDate = iso,
-                    dayOfMonth = day,
-                    isCurrentMonth = true,
-                    isPast = isDateInPast(cal)
-                )
-            )
+
+        val days = mutableListOf<CalendarDay>()
+
+        // Padding before first day of month
+        for (i in 1 until firstDayOfWeek) {
+            days.add(CalendarDay(day = 0, isCurrentMonth = false, dateIso = ""))
         }
 
-        // Add trailing days to complete full weeks (multiple of 7)
-        val remaining = (7 - (days.size % 7)) % 7
-        val nextCal = (cal.clone() as Calendar).apply {
-            add(Calendar.DAY_OF_MONTH, 1)
-        }
-        for (i in 0 until remaining) {
-            val iso = isoFormat.format(nextCal.time)
-            days.add(
-                CalendarDay(
-                    isoDate = iso,
-                    dayOfMonth = nextCal.get(Calendar.DAY_OF_MONTH),
-                    isCurrentMonth = false,
-                    isPast = isDateInPast(nextCal)
-                )
-            )
-            nextCal.add(Calendar.DAY_OF_MONTH, 1)
+        // Days of current month
+        for (d in 1..maxDays) {
+            val dateIso = toIsoDate(year, month, d)
+            days.add(CalendarDay(day = d, isCurrentMonth = true, dateIso = dateIso))
         }
 
         return days
     }
-
-    private fun isDateInPast(cal: Calendar): Boolean {
-        val today = Calendar.getInstance().apply {
-            set(Calendar.HOUR_OF_DAY, 0)
-            set(Calendar.MINUTE, 0)
-            set(Calendar.SECOND, 0)
-            set(Calendar.MILLISECOND, 0)
-        }
-        return cal.before(today)
-    }
-
-    fun addDaysToToday(daysToAdd: Int): String {
-        val cal = Calendar.getInstance().apply {
-            add(Calendar.DAY_OF_MONTH, daysToAdd)
-        }
-        return isoFormat.format(cal.time)
-    }
 }
 
 data class CalendarDay(
-    val isoDate: String,
-    val dayOfMonth: Int,
+    val day: Int,
     val isCurrentMonth: Boolean,
-    val isPast: Boolean
+    val dateIso: String
 )

@@ -4,7 +4,6 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.widget.Toast
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -19,11 +18,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -33,14 +29,11 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -54,7 +47,6 @@ import androidx.compose.ui.window.Dialog
 import com.example.data.model.StudioDateSlot
 import com.example.data.model.StudioProfile
 import com.example.ui.theme.StatusFreeGreen
-import com.example.ui.theme.StudioAmber
 
 @Composable
 fun ShareWhatsAppDialog(
@@ -66,19 +58,8 @@ fun ShareWhatsAppDialog(
     generateMessage: (gear: String, note: String) -> String
 ) {
     val context = LocalContext.current
-
-    var cameraGear by remember(profile) {
-        mutableStateOf(profile?.cameraGearDetails ?: "Sony FX3 / A7 IV • DJI Drone • 4K Cinematic Video • Gimbal & Pro Lights")
-    }
-    var customNote by remember(profile) {
-        mutableStateOf(profile?.customWhatsAppNote ?: "Latest 4K Cinematic Camera & Drone Coverage Available / नवीनतम 4K सिनेमैटिक कैमरा और ड्रोन कवरेज उपलब्ध है।")
-    }
-
-    var isEditSectionExpanded by remember { mutableStateOf(false) }
-
-    // Dynamically recompute preview message whenever cameraGear or customNote changes
-    val currentFormattedMessage = remember(cameraGear, customNote, freeSlots, profile) {
-        generateMessage(cameraGear, customNote)
+    val message = remember(profile, freeSlots) {
+        generateMessage(profile?.cameraGearDetails ?: "", profile?.customWhatsAppNote ?: "")
     }
 
     Dialog(onDismissRequest = onDismiss) {
@@ -86,10 +67,8 @@ fun ShareWhatsAppDialog(
             modifier = Modifier
                 .fillMaxWidth()
                 .testTag("share_whatsapp_dialog"),
-            shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surface
-            ),
+            shape = RoundedCornerShape(20.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
             elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
         ) {
             Column(
@@ -97,161 +76,44 @@ fun ShareWhatsAppDialog(
                     .fillMaxWidth()
                     .padding(20.dp)
             ) {
-                // Header
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column {
-                        Text(
-                            text = "📲 Share on WhatsApp",
-                            fontSize = 17.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            text = "Send Free Dates, Camera Details & Booking Link",
-                            fontSize = 11.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                    Text(
+                        text = "Share on WhatsApp / व्हाट्सएप शेयर",
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
                     IconButton(onClick = onDismiss) {
-                        Icon(imageVector = Icons.Default.Close, contentDescription = "Close")
+                        Icon(Icons.Default.Close, contentDescription = "Close")
                     }
                 }
 
                 Spacer(modifier = Modifier.height(10.dp))
 
-                // Toggle for Camera Details & Message Customization
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(StudioAmber.copy(alpha = 0.12f))
-                        .padding(horizontal = 12.dp, vertical = 6.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.CameraAlt,
-                            contentDescription = null,
-                            tint = StudioAmber,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = "Camera & Message Details",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-
-                    TextButton(
-                        onClick = { isEditSectionExpanded = !isEditSectionExpanded },
-                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp, vertical = 2.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Edit,
-                            contentDescription = null,
-                            tint = StudioAmber,
-                            modifier = Modifier.size(14.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = if (isEditSectionExpanded) "Hide" else "Set / Edit ⚙️",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = StudioAmber
-                        )
-                    }
-                }
-
-                // Expandable Section: Camera Details & Custom Note inputs
-                AnimatedVisibility(visible = isEditSectionExpanded) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 10.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        OutlinedTextField(
-                            value = cameraGear,
-                            onValueChange = { cameraGear = it },
-                            label = { Text("Camera & Gear Details (कैमरा उपकरण विवरण)") },
-                            placeholder = { Text("e.g. Sony FX3, A7 IV, DJI Drone, 4K Video, Lights") },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .testTag("input_camera_gear"),
-                            maxLines = 2
-                        )
-
-                        OutlinedTextField(
-                            value = customNote,
-                            onValueChange = { customNote = it },
-                            label = { Text("Special Offer / Message Note (विशेष नोट / ऑफ़र)") },
-                            placeholder = { Text("e.g. Special discounts available!") },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .testTag("input_custom_note"),
-                            maxLines = 2
-                        )
-
-                        Button(
-                            onClick = {
-                                onSaveCameraDetails(cameraGear, customNote)
-                                Toast.makeText(context, "Camera details saved! / विवरण सहेजा गया!", Toast.LENGTH_SHORT).show()
-                                isEditSectionExpanded = false
-                            },
-                            shape = RoundedCornerShape(10.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = StudioAmber),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Icon(imageVector = Icons.Default.Save, contentDescription = null, tint = Color.Black, modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = "Save to Studio Profile / प्रोफ़ाइल में सहेजें",
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.Black
-                            )
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(10.dp))
-
-                // WhatsApp Message Live Preview Box
-                Text(
-                    text = "Message Preview / संदेश पूर्वावलोकन:",
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-
+                // Message preview box
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(180.dp)
+                        .height(260.dp)
                         .clip(RoundedCornerShape(12.dp))
-                        .background(Color(0xFFEFEAE2)) // WhatsApp chat background tint
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
                         .verticalScroll(rememberScrollState())
-                        .padding(12.dp)
+                        .padding(14.dp)
                 ) {
                     Text(
-                        text = currentFormattedMessage,
+                        text = message,
                         fontSize = 12.sp,
-                        color = Color(0xFF111B21),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         lineHeight = 18.sp
                     )
                 }
 
-                Spacer(modifier = Modifier.height(14.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
-                // Action Buttons
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -259,46 +121,27 @@ fun ShareWhatsAppDialog(
                     OutlinedButton(
                         onClick = {
                             val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                            val clip = ClipData.newPlainText("Studio Expo Message", currentFormattedMessage)
+                            val clip = ClipData.newPlainText("WhatsApp Message", message)
                             clipboard.setPrimaryClip(clip)
-                            Toast.makeText(context, "Message Copied! / संदेश कॉपी हो गया!", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, "Copied to clipboard / कॉपी किया गया!", Toast.LENGTH_SHORT).show()
                         },
-                        shape = RoundedCornerShape(12.dp),
+                        shape = RoundedCornerShape(10.dp),
                         modifier = Modifier.weight(1f)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.ContentCopy,
-                            contentDescription = "Copy",
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
+                        Icon(Icons.Default.ContentCopy, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
                         Text("Copy", fontSize = 12.sp)
                     }
 
                     Button(
-                        onClick = {
-                            onShareClick(currentFormattedMessage)
-                            onDismiss()
-                        },
-                        shape = RoundedCornerShape(12.dp),
+                        onClick = { onShareClick(message) },
                         colors = ButtonDefaults.buttonColors(containerColor = StatusFreeGreen),
-                        modifier = Modifier
-                            .weight(1.5f)
-                            .testTag("send_whatsapp_btn")
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.weight(1f)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Share,
-                            contentDescription = "Share",
-                            tint = Color.White,
-                            modifier = Modifier.size(16.dp)
-                        )
+                        Icon(Icons.Default.Share, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = "WhatsApp Share 📲",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
-                        )
+                        Text("Share", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                     }
                 }
             }

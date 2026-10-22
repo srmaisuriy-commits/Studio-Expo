@@ -6,7 +6,6 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.example.data.model.BookingRequest
-import com.example.data.model.BookingStatus
 import com.example.data.model.DateStatus
 import com.example.data.model.SlotType
 import com.example.data.model.StudioDateSlot
@@ -16,152 +15,77 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 @Database(
-    entities = [
-        StudioProfile::class,
-        StudioDateSlot::class,
-        BookingRequest::class
-    ],
-    version = 3,
+    entities = [StudioProfile::class, StudioDateSlot::class, BookingRequest::class],
+    version = 2,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
-
     abstract fun studioDao(): StudioDao
 
     companion object {
         @Volatile
         private var INSTANCE: AppDatabase? = null
 
-        private val MIGRATION_2_3 = object : androidx.room.migration.Migration(2, 3) {
-            override fun migrate(db: SupportSQLiteDatabase) {
-                db.execSQL("ALTER TABLE studio_profile ADD COLUMN perDayRate REAL NOT NULL DEFAULT 25000.0")
-            }
-        }
-
         fun getDatabase(context: Context, scope: CoroutineScope): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
                     context.applicationContext,
                     AppDatabase::class.java,
-                    "studio_expo_database"
+                    "studio_expo_db"
                 )
-                    .addMigrations(MIGRATION_2_3)
-                    .fallbackToDestructiveMigration(dropAllTables = false)
+                    .fallbackToDestructiveMigration()
+                    .addCallback(DatabaseCallback(scope))
                     .build()
                 INSTANCE = instance
-
-                // Guarantee that initial profile and sample dates are seeded immediately on first run
-                scope.launch(Dispatchers.IO) {
-                    val dao = instance.studioDao()
-                    if (dao.getProfileSync() == null) {
-                        populateInitialData(dao)
-                    }
-                }
-
                 instance
             }
         }
 
-        private suspend fun populateInitialData(dao: StudioDao) {
-            // 1. Initial Studio Profile
-            dao.insertOrUpdateProfile(
-                StudioProfile(
-                    id = 1,
-                    studioName = "Studio Expo",
-                    photographerName = "Rajesh Maisuriya",
-                    phone = "9876543210",
-                    whatsapp = "9876543210",
-                    city = "Ahmedabad, Gujarat",
-                    ownerPin = "1234",
-                    bio = "Luxury Wedding & Cinematic Photography Studio. Capturing timeless moments across Gujarat & India.",
-                    cameraGearDetails = "Sony FX3 / A7 IV • DJI Drone • 4K Cinematic Video • Gimbal & Pro Lights",
-                    customWhatsAppNote = "Latest 4K Cinematic Camera & Drone Coverage Available. Special packages available! / नवीनतम 4K सिनेमैटिक कैमरा और ड्रोन कवरेज उपलब्ध है।",
-                    perDayRate = 25000.0
+        private class DatabaseCallback(
+            private val scope: CoroutineScope
+        ) : RoomDatabase.Callback() {
+            override fun onCreate(db: SupportSQLiteDatabase) {
+                super.onCreate(db)
+                INSTANCE?.let { database ->
+                    scope.launch(Dispatchers.IO) {
+                        populateInitialData(database.studioDao())
+                    }
+                }
+            }
+
+            suspend fun populateInitialData(dao: StudioDao) {
+                // Initial Studio Profile
+                dao.insertProfile(
+                    StudioProfile(
+                        id = 1,
+                        studioName = "Studio Expo",
+                        photographerName = "Rajesh Maisuriya",
+                        phone = "9876543210",
+                        whatsapp = "9876543210",
+                        city = "Ahmedabad, Gujarat",
+                        ownerPin = "1234",
+                        bio = "Luxury Wedding, Pre-Wedding & Cinematic Fashion Photography",
+                        instagramHandle = "@studioexpo.official",
+                        cameraGearDetails = "Sony FX3 / A7 IV • DJI Drone • 4K Cinematic Video • Gimbal & Pro Lights",
+                        customWhatsAppNote = "Latest 4K Cinematic Camera & Drone Coverage Available. Special packages available! / नवीनतम 4K सिनेमैटिक कैमरा और ड्रोन कवरेज उपलब्ध है।",
+                        customHeaderGreeting = "Hello! Here are our available (FREE) dates for upcoming wedding & events / नमस्ते! आगामी शादी और इवेंट्स के लिए हमारी उपलब्ध (FREE) तारीखें:",
+                        customFooterNote = "Reserve your special date today! Contact us on WhatsApp for bookings & details / अपनी तारीख आज ही बुक करें!",
+                        perDayRate = 25000.0
+                    )
                 )
-            )
 
-            // 2. Pre-seed sample dates in the upcoming days/weeks:
-            // Some FREE dates (🟢) and some BOOKED dates (🔴)
-            val slots = listOf(
-                StudioDateSlot(
-                    dateStr = DateUtils.addDaysToToday(2),
-                    status = DateStatus.FREE.name,
-                    slotType = SlotType.FULL_DAY.name,
-                    basePrice = 35000.0,
-                    note = "Available for Pre-Wedding or Event"
-                ),
-                StudioDateSlot(
-                    dateStr = DateUtils.addDaysToToday(4),
-                    status = DateStatus.FREE.name,
-                    slotType = SlotType.FULL_DAY.name,
-                    basePrice = 45000.0,
-                    note = "Wedding Ceremony Slot Open"
-                ),
-                StudioDateSlot(
-                    dateStr = DateUtils.addDaysToToday(6),
-                    status = DateStatus.BOOKED.name,
-                    slotType = SlotType.FULL_DAY.name,
-                    basePrice = 55000.0,
-                    note = "Confirmed Wedding Shoot"
-                ),
-                StudioDateSlot(
-                    dateStr = DateUtils.addDaysToToday(9),
-                    status = DateStatus.FREE.name,
-                    slotType = SlotType.MORNING.name,
-                    basePrice = 20000.0,
-                    note = "Morning Baby Shower / Sangeet"
-                ),
-                StudioDateSlot(
-                    dateStr = DateUtils.addDaysToToday(11),
-                    status = DateStatus.FREE.name,
-                    slotType = SlotType.FULL_DAY.name,
-                    basePrice = 50000.0,
-                    note = "Available for Destination Shoot"
-                ),
-                StudioDateSlot(
-                    dateStr = DateUtils.addDaysToToday(14),
-                    status = DateStatus.BOOKED.name,
-                    slotType = SlotType.FULL_DAY.name,
-                    basePrice = 60000.0,
-                    note = "Grand Reception Night"
-                ),
-                StudioDateSlot(
-                    dateStr = DateUtils.addDaysToToday(18),
-                    status = DateStatus.FREE.name,
-                    slotType = SlotType.FULL_DAY.name,
-                    basePrice = 40000.0,
-                    note = "Weekend Available"
+                // Add starter dates for demo
+                val dates = listOf<StudioDateSlot>(
+                    StudioDateSlot(dateStr = "2026-10-20", status = DateStatus.FREE, note = "Available for Wedding/Shoot", slotType = SlotType.FULL_DAY),
+                    StudioDateSlot(dateStr = "2026-10-22", status = DateStatus.FREE, note = "Available", slotType = SlotType.FULL_DAY),
+                    StudioDateSlot(dateStr = "2026-10-24", status = DateStatus.BOOKED, note = "Wedding in Ahmedabad", slotType = SlotType.FULL_DAY, bookedCustomerName = "Amit Patel", bookedCustomerPhone = "9898012345", workType = "Wedding Ceremony", amount = 50000.0),
+                    StudioDateSlot(dateStr = "2026-10-25", status = DateStatus.BOOKED, note = "Reception Shoot", slotType = SlotType.FULL_DAY, bookedCustomerName = "Amit Patel", bookedCustomerPhone = "9898012345", workType = "Reception Night", amount = 25000.0),
+                    StudioDateSlot(dateStr = "2026-10-28", status = DateStatus.FREE, note = "Available for Booking", slotType = SlotType.FULL_DAY),
+                    StudioDateSlot(dateStr = "2026-11-05", status = DateStatus.FREE, note = "Available for Pre-Wedding", slotType = SlotType.FULL_DAY),
+                    StudioDateSlot(dateStr = "2026-11-12", status = DateStatus.FREE, note = "Available", slotType = SlotType.FULL_DAY)
                 )
-            )
-            dao.insertDateSlots(slots)
-
-            // 3. Pre-seed a sample pending booking request and confirmed booking
-            val booking1 = BookingRequest(
-                dateStr = DateUtils.addDaysToToday(4),
-                customerName = "Bhavin Shah",
-                customerPhone = "9825012345",
-                workType = "Wedding Ceremony (शादी / विवाह)",
-                amount = 45000.0,
-                location = "Shubh Banquet, SG Highway",
-                notes = "Morning Muhurat & Evening Reception. Drone required.",
-                status = BookingStatus.PENDING.name,
-                isSubmittedByCurrentCustomer = false
-            )
-            dao.insertBooking(booking1)
-
-            val booking2 = BookingRequest(
-                dateStr = DateUtils.addDaysToToday(6),
-                customerName = "Pooja Patel",
-                customerPhone = "9898056789",
-                workType = "Pre-Wedding Shoot (प्री-वेडिंग शूट)",
-                amount = 55000.0,
-                location = "Polo Forest & Heritage City",
-                notes = "2 Days Shoot with Traditional Attire",
-                status = BookingStatus.CONFIRMED.name,
-                isSubmittedByCurrentCustomer = false
-            )
-            val id2 = dao.insertBooking(booking2)
-            dao.updateDateSlotStatus(DateUtils.addDaysToToday(6), DateStatus.BOOKED.name, id2)
+                dates.forEach { dao.insertOrUpdateDateSlot(it) }
+            }
         }
     }
 }

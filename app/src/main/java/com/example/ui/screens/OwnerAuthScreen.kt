@@ -84,7 +84,6 @@ fun OwnerAuthScreen(
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
 
-    // Email / Password Form state
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var isPasswordVisible by remember { mutableStateOf(false) }
@@ -125,7 +124,6 @@ fun OwnerAuthScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Single Clean Header: "Welcome to Studio Expo"
             Text(
                 text = "Welcome to $studioName",
                 fontSize = 26.sp,
@@ -162,7 +160,6 @@ fun OwnerAuthScreen(
 
                     Spacer(modifier = Modifier.height(18.dp))
 
-                    // Email Field
                     OutlinedTextField(
                         value = email,
                         onValueChange = { email = it },
@@ -184,7 +181,6 @@ fun OwnerAuthScreen(
 
                     Spacer(modifier = Modifier.height(14.dp))
 
-                    // Password Field
                     OutlinedTextField(
                         value = password,
                         onValueChange = { password = it },
@@ -226,11 +222,10 @@ fun OwnerAuthScreen(
 
                     Spacer(modifier = Modifier.height(20.dp))
 
-                    // Log In Button
                     Button(
                         onClick = {
                             if (email.isBlank() || password.isBlank()) {
-                                Toast.makeText(context, "Please fill in all fields", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, "Please enter email and password", Toast.LENGTH_SHORT).show()
                                 return@Button
                             }
                             isLoading = true
@@ -266,7 +261,6 @@ fun OwnerAuthScreen(
 
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    // Toggle Login / Sign Up
                     TextButton(
                         onClick = { isSignUpMode = !isSignUpMode }
                     ) {
@@ -278,7 +272,6 @@ fun OwnerAuthScreen(
                         )
                     }
 
-                    // Divider OR
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -295,7 +288,6 @@ fun OwnerAuthScreen(
                         HorizontalDivider(modifier = Modifier.weight(1f))
                     }
 
-                    // Google Sign-In Button
                     OutlinedButton(
                         onClick = {
                             coroutineScope.launch {
@@ -342,7 +334,6 @@ fun OwnerAuthScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Switch to Public Customer View
             OutlinedButton(
                 onClick = onSwitchToCustomer,
                 modifier = Modifier

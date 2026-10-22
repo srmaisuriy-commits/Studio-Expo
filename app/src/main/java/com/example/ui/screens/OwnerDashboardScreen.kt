@@ -5,7 +5,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -19,11 +18,11 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.EditNote
-import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Inbox
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -31,14 +30,14 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -48,10 +47,9 @@ import com.example.data.model.BookingRequest
 import com.example.data.model.DateStatus
 import com.example.data.model.StudioDateSlot
 import com.example.data.model.StudioProfile
-import com.example.ui.components.StatusBadge
 import com.example.ui.theme.StatusBookedRed
 import com.example.ui.theme.StatusFreeGreen
-import com.example.ui.theme.StatusPendingAmber
+import com.example.ui.theme.StatusRequestYellow
 import com.example.ui.theme.StudioAmber
 
 @Composable
@@ -64,449 +62,260 @@ fun OwnerDashboardScreen(
     onNavigateRequests: () -> Unit,
     onAddFreeDateClick: () -> Unit,
     onShareWhatsAppClick: () -> Unit,
-    onSetMessageTemplateClick: () -> Unit = {},
+    onSetMessageTemplateClick: () -> Unit,
     onConfirmBooking: (BookingRequest) -> Unit,
     onOpenBookingDetail: (BookingRequest) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val freeCount = dateSlots.count { it.status == DateStatus.FREE.name }
-    val bookedCount = dateSlots.count { it.status == DateStatus.BOOKED.name }
-    val pendingCount = pendingRequests.size
+    val freeCount = dateSlots.count { it.status == DateStatus.FREE }
+    val bookedCount = dateSlots.count { it.status == DateStatus.BOOKED }
 
-    LazyColumn(
-        modifier = modifier
-            .fillMaxSize()
-            .testTag("owner_dashboard_list"),
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+    Surface(
+        modifier = modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.background
     ) {
-        // Welcome Card
-        item {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant
-                )
-            ) {
-                Column(modifier = Modifier.padding(18.dp)) {
-                    Text(
-                        text = "Hello, ${profile?.photographerName ?: "Photographer"} 👋 (नमस्ते)",
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "${profile?.studioName ?: "Studio Expo"} • ${profile?.city ?: "India"} • 💰 ₹${(profile?.perDayRate ?: 25000.0).toInt()}/Day",
-                        fontSize = 13.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-        }
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            item { Spacer(modifier = Modifier.height(8.dp)) }
 
-        // Metrics Row
-        item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                MetricCard(
-                    title = "Free Dates",
-                    count = freeCount.toString(),
-                    labelHindi = "🟢 उपलब्ध",
-                    color = StatusFreeGreen,
-                    modifier = Modifier.weight(1f)
-                )
-
-                MetricCard(
-                    title = "Booked",
-                    count = bookedCount.toString(),
-                    labelHindi = "🔴 बुक",
-                    color = StatusBookedRed,
-                    modifier = Modifier.weight(1f)
-                )
-
-                MetricCard(
-                    title = "Pending Req",
-                    count = pendingCount.toString(),
-                    labelHindi = "🟡 अनुरोध",
-                    color = StatusPendingAmber,
-                    modifier = Modifier
-                        .weight(1f)
-                        .clickable { onNavigateRequests() }
-                )
-            }
-        }
-
-        // Quick Actions Grid
-        item {
-            Text(
-                text = "Quick Actions (त्वरित कार्य)",
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onBackground
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                QuickActionCard(
-                    title = "Add Free Date",
-                    subtitle = "➕ तारीख जोड़ें",
-                    icon = Icons.Default.Add,
-                    iconBg = StatusFreeGreen,
-                    onClick = onAddFreeDateClick,
-                    modifier = Modifier
-                        .weight(1f)
-                        .testTag("action_add_free_date")
-                )
-
-                QuickActionCard(
-                    title = "Share WhatsApp",
-                    subtitle = "📲 लिंक भेजें",
-                    icon = Icons.Default.Share,
-                    iconBg = StudioAmber,
-                    onClick = onShareWhatsAppClick,
-                    modifier = Modifier
-                        .weight(1f)
-                        .testTag("action_share_whatsapp")
-                )
-            }
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                QuickActionCard(
-                    title = "View Calendar",
-                    subtitle = "📅 कैलेंडर देखें",
-                    icon = Icons.Default.CalendarMonth,
-                    iconBg = Color(0xFF3B82F6),
-                    onClick = onNavigateCalendar,
-                    modifier = Modifier
-                        .weight(1f)
-                        .testTag("action_view_calendar")
-                )
-
-                QuickActionCard(
-                    title = "Requests ($pendingCount)",
-                    subtitle = "🔔 अनुरोध विवरण",
-                    icon = Icons.Default.Notifications,
-                    iconBg = StatusPendingAmber,
-                    onClick = onNavigateRequests,
-                    modifier = Modifier
-                        .weight(1f)
-                        .testTag("action_view_requests")
-                )
-            }
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            QuickActionCard(
-                title = "Set WhatsApp Message & Gear",
-                subtitle = "📝 कैमरा विवरण व मैसेज टेम्पलेट सेट करें",
-                icon = Icons.Default.EditNote,
-                iconBg = StudioAmber,
-                onClick = onSetMessageTemplateClick,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag("action_set_message_template")
-            )
-        }
-
-        // Pending Booking Requests Section
-        item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "🔔 New Pending Requests (नई बुकिंग अनुरोध)",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onBackground
-                )
-                if (pendingRequests.isNotEmpty()) {
-                    TextButton(onClick = onNavigateRequests) {
-                        Text("View All / सभी देखें (${pendingRequests.size})", color = StudioAmber, fontSize = 12.sp)
-                    }
-                }
-            }
-        }
-
-        if (pendingRequests.isEmpty()) {
+            // Owner Greeting Banner
             item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(20.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(
-                            text = "🎉 No pending requests currently / वर्तमान में कोई लंबित अनुरोध नहीं है",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Text(
-                            text = "Share Free Dates on WhatsApp with clients to get bookings / व्हाट्सएप पर तारीखें शेयर करें",
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
-                            modifier = Modifier.padding(top = 4.dp)
-                        )
-                    }
-                }
-            }
-        } else {
-            items(pendingRequests.take(3)) { request ->
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { onOpenBookingDetail(request) },
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surface
-                    ),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                        .testTag("owner_greeting_banner"),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
                 ) {
-                    Column(modifier = Modifier.padding(14.dp)) {
+                    Column(modifier = Modifier.padding(18.dp)) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(
-                                text = request.customerName,
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            StatusBadge(status = request.status)
-                        }
-
-                        Spacer(modifier = Modifier.height(4.dp))
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text(
-                                text = "📅 ${DateUtils.formatForDisplay(request.dateStr)}",
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = StudioAmber
-                            )
-                            Text(
-                                text = "₹${request.amount.toInt()}",
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = StatusFreeGreen
-                            )
-                        }
-
-                        Text(
-                            text = "📸 ${request.workType}",
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(top = 2.dp)
-                        )
-
-                        Spacer(modifier = Modifier.height(10.dp))
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.End
-                        ) {
-                            Button(
-                                onClick = { onConfirmBooking(request) },
-                                shape = RoundedCornerShape(10.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = StatusFreeGreen),
-                                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.CheckCircle,
-                                    contentDescription = "Confirm",
-                                    tint = Color.White,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
+                            Column {
                                 Text(
-                                    text = "Confirm / Done ✅",
+                                    text = "Welcome, ${profile?.photographerName ?: "Owner"}",
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = "${profile?.studioName ?: "Studio Expo"} • ${profile?.city ?: "Ahmedabad"}",
+                                    fontSize = 12.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(StudioAmber.copy(alpha = 0.15f))
+                                    .padding(horizontal = 10.dp, vertical = 6.dp)
+                            ) {
+                                Text(
+                                    text = "₹${profile?.perDayRate?.toInt() ?: 25000}/Day",
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = Color.White
+                                    color = StudioAmber
                                 )
                             }
                         }
                     }
                 }
             }
-        }
 
-        // Upcoming Free Dates preview
-        item {
-            Spacer(modifier = Modifier.height(8.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "🟢 Available Slots (उपलब्ध तारीखें)",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onBackground
-                )
-                TextButton(onClick = onNavigateCalendar) {
-                    Text("View Calendar / कैलेंडर देखें", color = StudioAmber, fontSize = 12.sp)
+            // Quick Stats Row
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    StatCard(
+                        title = "Available / उपलब्ध",
+                        count = "$freeCount",
+                        color = StatusFreeGreen,
+                        icon = "🟢",
+                        onClick = onNavigateCalendar,
+                        modifier = Modifier.weight(1f)
+                    )
+                    StatCard(
+                        title = "Booked / बुक",
+                        count = "$bookedCount",
+                        color = StatusBookedRed,
+                        icon = "🔴",
+                        onClick = onNavigateCalendar,
+                        modifier = Modifier.weight(1f)
+                    )
+                    StatCard(
+                        title = "Requests / अनुरोध",
+                        count = "${pendingRequests.size}",
+                        color = StatusRequestYellow,
+                        icon = "🟡",
+                        onClick = onNavigateRequests,
+                        modifier = Modifier.weight(1f)
+                    )
                 }
             }
-        }
 
-        val upcomingFree = dateSlots.filter { it.status == DateStatus.FREE.name }.sortedBy { it.dateStr }
-        if (upcomingFree.isEmpty()) {
+            // Quick Actions
             item {
-                Text(
-                    text = "No free dates currently set. Tap 'Add Free Date' to set dates / कोई तारीख उपलब्ध नहीं है।",
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        } else {
-            items(upcomingFree.take(4)) { slot ->
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(MaterialTheme.colorScheme.surface)
-                        .padding(horizontal = 14.dp, vertical = 10.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Button(
+                        onClick = onShareWhatsAppClick,
+                        colors = ButtonDefaults.buttonColors(containerColor = StatusFreeGreen),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.weight(1f).height(48.dp)
+                    ) {
+                        Icon(Icons.Default.Share, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Share Free Dates", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    }
+
+                    Button(
+                        onClick = onNavigateCalendar,
+                        colors = ButtonDefaults.buttonColors(containerColor = StudioAmber),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.weight(1f).height(48.dp)
+                    ) {
+                        Icon(Icons.Default.CalendarMonth, contentDescription = null, tint = Color.Black, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Manage Dates", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    }
+                }
+            }
+
+            // Pending Inquiries section
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column {
+                    Text(
+                        text = "Pending Inquiries (${pendingRequests.size})",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                    if (pendingRequests.isNotEmpty()) {
                         Text(
-                            text = DateUtils.formatFullForDisplay(slot.dateStr),
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            text = slot.note.ifBlank { "Full Day Shoot Available" },
+                            text = "View All",
                             fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = StudioAmber,
+                            fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.clickable { onNavigateRequests() }
                         )
                     }
-                    StatusBadge(status = DateStatus.FREE.name)
                 }
             }
+
+            if (pendingRequests.isEmpty()) {
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                    ) {
+                        Text(
+                            text = "No pending inquiries. All caught up!\nकोई लंबित अनुरोध नहीं है।",
+                            fontSize = 13.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(16.dp)
+                        )
+                    }
+                }
+            } else {
+                items(pendingRequests.take(4)) { booking ->
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onOpenBookingDetail(booking) },
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(14.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column {
+                                Text(
+                                    text = booking.customerName,
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = "${booking.workType} • 📅 ${DateUtils.formatForDisplay(booking.dateStr)}",
+                                    fontSize = 12.sp,
+                                    color = StudioAmber
+                                )
+                                if (booking.requestedAmount > 0) {
+                                    Text(
+                                        text = "₹${booking.requestedAmount.toInt()}",
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = StatusFreeGreen
+                                    )
+                                }
+                            }
+                            Button(
+                                onClick = { onConfirmBooking(booking) },
+                                shape = RoundedCornerShape(8.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = StatusFreeGreen)
+                            ) {
+                                Text("Confirm", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                            }
+                        }
+                    }
+                }
+            }
+
+            item { Spacer(modifier = Modifier.height(20.dp)) }
         }
     }
 }
 
 @Composable
-private fun MetricCard(
+private fun StatCard(
     title: String,
     count: String,
-    labelHindi: String,
     color: Color,
+    icon: String,
+    onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Card(
-        modifier = modifier,
+        modifier = modifier.clickable { onClick() },
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Column(
             modifier = Modifier.padding(12.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            Text(icon, fontSize = 18.sp)
+            Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = count,
-                fontSize = 24.sp,
+                fontSize = 20.sp,
                 fontWeight = FontWeight.ExtraBold,
                 color = color
             )
             Text(
                 text = title,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Text(
-                text = labelHindi,
                 fontSize = 10.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-        }
-    }
-}
-
-@Composable
-private fun QuickActionCard(
-    title: String,
-    subtitle: String,
-    icon: ImageVector,
-    iconBg: Color,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        modifier = modifier.clickable(onClick = onClick),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(14.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(CircleShape)
-                    .background(iconBg),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = Color.White,
-                    modifier = Modifier.size(20.dp)
-                )
-            }
-            Spacer(modifier = Modifier.width(10.dp))
-            Column {
-                Text(
-                    text = title,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Text(
-                    text = subtitle,
-                    fontSize = 11.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
         }
     }
 }

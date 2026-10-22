@@ -1,48 +1,27 @@
 package com.example.ui.screens
 
+import android.content.Context
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CalendarMonth
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material3.Badge
-import androidx.compose.material3.BadgedBox
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.data.model.DateStatus
+import com.example.data.model.BookingRequest
+import com.example.data.model.StudioProfile
+import com.example.ui.components.OwnerBottomNavBar
 import com.example.ui.components.StudioTopBar
-import com.example.ui.theme.StatusPendingAmber
-import com.example.ui.theme.StudioAmber
 import com.example.ui.viewmodel.AppRole
 import com.example.ui.viewmodel.OwnerScreen
 import com.example.ui.viewmodel.StudioViewModel
 
 @Composable
 fun MainScreen(
-    viewModel: StudioViewModel = viewModel(),
+    viewModel: StudioViewModel,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -56,7 +35,6 @@ fun MainScreen(
     val dateSlots by viewModel.dateSlots.collectAsStateWithLifecycle()
     val allBookings by viewModel.allBookings.collectAsStateWithLifecycle()
     val pendingBookings by viewModel.pendingBookings.collectAsStateWithLifecycle()
-    val customerMyRequests by viewModel.customerMyRequests.collectAsStateWithLifecycle()
 
     val calendarYear by viewModel.calendarYear.collectAsStateWithLifecycle()
     val calendarMonth by viewModel.calendarMonth.collectAsStateWithLifecycle()
@@ -69,8 +47,8 @@ fun MainScreen(
     val activeBookingDetail by viewModel.activeBookingDetail.collectAsStateWithLifecycle()
     val bookingSuccessDialog by viewModel.bookingSuccessDialog.collectAsStateWithLifecycle()
 
-    // Handle Back Press
-    BackHandler(enabled = currentRole == AppRole.OWNER && currentOwnerScreen != OwnerScreen.DASHBOARD) {
+    // Back button handling: In owner mode, navigate back to Dashboard before closing
+    BackHandler(enabled = currentRole == AppRole.OWNER && isOwnerAuthenticated && currentOwnerScreen != OwnerScreen.DASHBOARD) {
         viewModel.setOwnerScreen(OwnerScreen.DASHBOARD)
     }
 
@@ -82,18 +60,18 @@ fun MainScreen(
                     currentRole = currentRole,
                     studioName = profile?.studioName ?: "Studio Expo",
                     onRoleSelected = { role ->
-                        if (role == AppRole.CUSTOMER) {
-                            viewModel.switchToCustomerView()
-                        } else {
+                        if (role == AppRole.OWNER) {
                             viewModel.switchToOwnerView()
+                        } else {
+                            viewModel.switchToCustomerView()
                         }
                     },
-                    onShareClick = {
-                        viewModel.openShareDialog()
-                    },
-                    onMessageTemplateClick = {
-                        viewModel.openMessageTemplateDialog()
-                    }
+                    onShareClick = if (currentRole == AppRole.OWNER) {
+                        { viewModel.openShareDialog() }
+                    } else null,
+                    onMessageTemplateClick = if (currentRole == AppRole.OWNER) {
+                        { viewModel.openMessageTemplateDialog() }
+                    } else null
                 )
             }
         },
@@ -102,29 +80,55 @@ fun MainScreen(
                 OwnerBottomNavBar(
                     currentScreen = currentOwnerScreen,
                     pendingCount = pendingBookings.size,
-                    onScreenSelected = { viewModel.setOwnerScreen(it) },
-                    modifier = Modifier.windowInsetsPadding(WindowInsets.navigationBars)
+                    onScreenSelected = { screen ->
+                        viewModel.setOwnerScreen(screen)
+                    }
                 )
             }
         }
-    ) { innerPadding ->
+    ) { paddingValues ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding)
+                .padding(paddingValues)
         ) {
             when (currentRole) {
+                AppRole.CUSTOMER -> {
+                    CustomerBookingScreen(
+                        profile = profile,
+                        year = calendarYear,
+                        monthZeroIndexed = calendarMonth,
+                        dateSlots = dateSlots,
+                        bookings = allBookings,
+                        selectedDate = selectedDate,
+                        bookingSuccessDialog = bookingSuccessDialog,
+                        onPreviousMonth = { viewModel.previousMonth() },
+                        onNextMonth = { viewModel.nextMonth() },
+                        onDateSelected = { dateIso -> viewModel.selectDate(dateIso) },
+                        onSubmitBooking = { dates, name, phone, workType, amount, location, notes ->
+                            viewModel.submitCustomerBooking(dates, name, phone, workType, amount, location, notes)
+                        },
+                        onDismissSuccess = { viewModel.dismissBookingSuccessDialog() },
+                        onWhatsAppDirect = { phone, msg ->
+                            viewModel.openWhatsAppChatWithCustomer(context, phone, msg)
+                        },
+                        onCallDirect = { phone ->
+                            viewModel.callCustomer(context, phone)
+                        }
+                    )
+                }
+
                 AppRole.OWNER -> {
                     if (!isOwnerAuthenticated) {
                         OwnerAuthScreen(
                             studioName = profile?.studioName ?: "Studio Expo",
-                            photographerName = profile?.photographerName ?: "Rajesh Maisuriya",
+                            photographerName = profile?.photographerName ?: "Owner",
                             pinError = ownerPinError,
                             onPinEntered = { pin -> viewModel.verifyOwnerPin(pin) },
-                            onEmailLogin = { email, pass -> viewModel.loginWithEmail(email, pass) },
-                            onEmailSignUp = { email, pass -> viewModel.signUpWithEmail(email, pass) },
-                            onGoogleLogin = { idToken -> viewModel.loginWithGoogleCredential(idToken) },
-                            onDirectLogin = { user -> viewModel.authenticateDirectly(user) },
+                            onEmailLogin = { email, pass -> viewModel.loginOwnerWithEmail(email, pass) },
+                            onEmailSignUp = { email, pass -> viewModel.registerOwnerWithEmail(email, pass) },
+                            onGoogleLogin = { idToken -> viewModel.loginOwnerWithGoogle(idToken) },
+                            onDirectLogin = { user -> viewModel.authenticateOwner(user) },
                             onSwitchToCustomer = { viewModel.switchToCustomerView() }
                         )
                     } else {
@@ -137,13 +141,14 @@ fun MainScreen(
                                     allBookings = allBookings,
                                     onNavigateCalendar = { viewModel.setOwnerScreen(OwnerScreen.CALENDAR) },
                                     onNavigateRequests = { viewModel.setOwnerScreen(OwnerScreen.REQUESTS) },
-                                    onAddFreeDateClick = { viewModel.setOwnerScreen(OwnerScreen.CALENDAR) },
+                                    onAddFreeDateClick = { viewModel.openAddDateDialog() },
                                     onShareWhatsAppClick = { viewModel.openShareDialog() },
                                     onSetMessageTemplateClick = { viewModel.openMessageTemplateDialog() },
-                                    onConfirmBooking = { viewModel.confirmBooking(it) },
-                                    onOpenBookingDetail = { viewModel.openBookingDetail(it) }
+                                    onConfirmBooking = { booking -> viewModel.confirmBooking(booking) },
+                                    onOpenBookingDetail = { booking -> viewModel.openBookingDetail(booking) }
                                 )
                             }
+
                             OwnerScreen.CALENDAR -> {
                                 OwnerCalendarScreen(
                                     year = calendarYear,
@@ -154,201 +159,95 @@ fun MainScreen(
                                     profile = profile,
                                     onPreviousMonth = { viewModel.previousMonth() },
                                     onNextMonth = { viewModel.nextMonth() },
-                                    onDateToggle = { viewModel.toggleOwnerSelectedDate(it) },
+                                    onDateToggle = { dateIso -> viewModel.toggleOwnerSelectedDate(dateIso) },
                                     onClearAllSelectedDates = { viewModel.clearOwnerSelectedDates() },
-                                    onSetFreeDates = { viewModel.setMultipleDatesStatus(it, DateStatus.FREE) },
-                                    onSetBookedDates = { viewModel.setMultipleDatesStatus(it, DateStatus.BOOKED) },
-                                    onSetRequestDates = { viewModel.setMultipleDatesStatus(it, DateStatus.REQUEST) },
-                                    onClearDates = { viewModel.clearMultipleDatesStatus(it) },
+                                    onSetFreeDates = { dates -> viewModel.markDatesAsFree(dates) },
+                                    onSetBookedDates = { dates -> viewModel.markDatesAsBooked(dates) },
+                                    onSetRequestDates = { dates -> viewModel.markDatesAsPending(dates) },
+                                    onClearDates = { dates -> viewModel.clearDatesStatus(dates) },
                                     onDirectBookingDone = { dates, name, phone, workType, amount ->
-                                        viewModel.createDirectBookingForMultipleDates(dates, name, phone, workType, amount)
+                                        viewModel.createDirectOwnerBooking(dates, name, phone, workType, amount)
                                     },
                                     onCallCustomer = { phone -> viewModel.callCustomer(context, phone) },
-                                    onWhatsAppCustomer = { phone, msg ->
-                                        viewModel.openWhatsAppChatWithCustomer(context, phone, msg)
-                                    },
+                                    onWhatsAppCustomer = { phone, msg -> viewModel.openWhatsAppChatWithCustomer(context, phone, msg) },
                                     onShareWhatsAppClick = { viewModel.openShareDialog() },
-                                    onSetMessageTemplateClick = { viewModel.openMessageTemplateDialog() },
+                                    onMessageTemplateClick = { viewModel.openMessageTemplateDialog() },
                                     onCloseDatePanel = { viewModel.clearOwnerSelectedDates() }
                                 )
                             }
+
                             OwnerScreen.REQUESTS -> {
                                 OwnerBookingRequestsScreen(
                                     bookings = allBookings,
-                                    onConfirmBooking = { viewModel.confirmBooking(it) },
-                                    onRejectBooking = { viewModel.rejectBooking(it) },
-                                    onCallCustomer = { phone -> viewModel.callCustomer(context, phone) },
-                                    onWhatsAppCustomer = { phone, msg ->
-                                        viewModel.openWhatsAppChatWithCustomer(context, phone, msg)
-                                    },
-                                    onOpenBookingDetail = { viewModel.openBookingDetail(it) }
+                                    onConfirmBooking = { booking -> viewModel.confirmBooking(booking) },
+                                    onRejectBooking = { booking -> viewModel.rejectBooking(booking) },
+                                    onOpenBookingDetail = { booking -> viewModel.openBookingDetail(booking) }
                                 )
                             }
+
                             OwnerScreen.PROFILE -> {
                                 OwnerProfileScreen(
                                     profile = profile,
-                                    onSaveProfile = { viewModel.updateProfile(it) },
+                                    onSaveProfile = { updated -> viewModel.saveProfile(updated) },
                                     onLogout = { viewModel.logoutOwner() }
                                 )
                             }
                         }
                     }
                 }
-
-                AppRole.CUSTOMER -> {
-                    // Customer Public Booking Flow (NO LOGIN REQUIRED)
-                    CustomerBookingScreen(
-                        profile = profile,
-                        year = calendarYear,
-                        monthZeroIndexed = calendarMonth,
-                        dateSlots = dateSlots,
-                        myRequests = customerMyRequests,
-                        selectedDate = selectedDate,
-                        showSuccessDialog = bookingSuccessDialog,
-                        onPreviousMonth = { viewModel.previousMonth() },
-                        onNextMonth = { viewModel.nextMonth() },
-                        onSelectDate = { viewModel.selectDate(it) },
-                        onSubmitBooking = { dates, name, phone, workType, amount, location, notes ->
-                            viewModel.submitCustomerBooking(dates, name, phone, workType, amount, location, notes)
-                        },
-                        onDismissSuccessDialog = { viewModel.dismissBookingSuccess() },
-                        onWhatsAppStudio = { phone, msg ->
-                            viewModel.openWhatsAppChatWithCustomer(context, phone, msg)
-                        },
-                        onCallStudio = { phone -> viewModel.callCustomer(context, phone) }
-                    )
-                }
             }
         }
     }
 
-    // Direct Share WhatsApp Dialog with Auto-Updated Live Calendar Free Dates and Camera Gear Config
+    // Modal Dialogs
     if (showShareDialog) {
+        val freeSlots = dateSlots.filter { it.status == com.example.data.model.DateStatus.FREE }
         ShareWhatsAppDialog(
             profile = profile,
-            freeSlots = dateSlots,
+            freeSlots = freeSlots,
             onDismiss = { viewModel.closeShareDialog() },
-            onShareClick = { customMsg ->
-                viewModel.shareFreeDatesOnWhatsApp(context, customMsg)
+            onShareClick = { msg ->
+                viewModel.shareFormattedMessage(context, msg)
+                viewModel.closeShareDialog()
             },
             onSaveCameraDetails = { gear, note ->
-                viewModel.updateCameraAndWhatsAppNote(gear, note)
+                viewModel.updateEquipmentAndNote(gear, note)
             },
             generateMessage = { gear, note ->
-                viewModel.getDynamicWhatsAppMessage(gear, note)
+                viewModel.buildBroadcastMessage(gear, note, freeSlots)
             }
         )
     }
 
-    // Full Message Template Builder & Camera Gear Config Dialog
     if (showMessageTemplateDialog) {
         MessageTemplateDialog(
             profile = profile,
             onDismiss = { viewModel.closeMessageTemplateDialog() },
-            onSaveTemplate = { gear, note, greeting, footer ->
-                viewModel.updateFullMessageTemplate(gear, note, greeting, footer)
-            },
-            onShareClick = { customMsg ->
-                viewModel.shareFreeDatesOnWhatsApp(context, customMsg)
-            },
-            generateMessage = { gear, note, greeting, footer ->
-                viewModel.getDynamicWhatsAppMessage(
-                    customGear = gear,
-                    customNote = note,
-                    customGreeting = greeting,
-                    customFooter = footer
-                )
+            onSave = { gear, note, greeting, footer ->
+                viewModel.saveCustomTemplates(gear, note, greeting, footer)
+                viewModel.closeMessageTemplateDialog()
+            }
+        )
+    }
+
+    if (showAddDateDialog) {
+        AddFreeDateDialog(
+            initialDateIso = selectedDate,
+            onDismiss = { viewModel.closeAddDateDialog() },
+            onConfirm = { dateIso, note, slotType ->
+                viewModel.addFreeDate(dateIso, note, slotType)
+                viewModel.closeAddDateDialog()
             }
         )
     }
 
     if (activeBookingDetail != null) {
+        val booking = activeBookingDetail!!
         BookingDetailDialog(
-            booking = activeBookingDetail!!,
+            booking = booking,
             onDismiss = { viewModel.closeBookingDetail() },
-            onConfirm = { viewModel.confirmBooking(activeBookingDetail!!) },
-            onReject = { viewModel.rejectBooking(activeBookingDetail!!) },
-            onCallCustomer = { viewModel.callCustomer(context, activeBookingDetail!!.customerPhone) },
-            onWhatsAppCustomer = {
-                val msg = "Hello ${activeBookingDetail!!.customerName}, regarding your booking on ${activeBookingDetail!!.dateStr} for ${activeBookingDetail!!.workType}..."
-                viewModel.openWhatsAppChatWithCustomer(context, activeBookingDetail!!.customerPhone, msg)
-            }
-        )
-    }
-}
-
-@Composable
-private fun OwnerBottomNavBar(
-    currentScreen: OwnerScreen,
-    pendingCount: Int,
-    onScreenSelected: (OwnerScreen) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    NavigationBar(
-        modifier = modifier.testTag("owner_bottom_nav"),
-        containerColor = MaterialTheme.colorScheme.surface,
-        tonalElevation = 6.dp
-    ) {
-        NavigationBarItem(
-            selected = currentScreen == OwnerScreen.DASHBOARD,
-            onClick = { onScreenSelected(OwnerScreen.DASHBOARD) },
-            icon = { Icon(imageVector = Icons.Default.Home, contentDescription = "Dashboard") },
-            label = { Text("Home", fontSize = 11.sp, fontWeight = FontWeight.SemiBold) },
-            colors = NavigationBarItemDefaults.colors(
-                selectedIconColor = Color.Black,
-                indicatorColor = StudioAmber
-            )
-        )
-
-        NavigationBarItem(
-            selected = currentScreen == OwnerScreen.CALENDAR,
-            onClick = { onScreenSelected(OwnerScreen.CALENDAR) },
-            icon = { Icon(imageVector = Icons.Default.CalendarMonth, contentDescription = "Calendar") },
-            label = { Text("Calendar", fontSize = 11.sp, fontWeight = FontWeight.SemiBold) },
-            colors = NavigationBarItemDefaults.colors(
-                selectedIconColor = Color.Black,
-                indicatorColor = StudioAmber
-            )
-        )
-
-        NavigationBarItem(
-            selected = currentScreen == OwnerScreen.REQUESTS,
-            onClick = { onScreenSelected(OwnerScreen.REQUESTS) },
-            icon = {
-                if (pendingCount > 0) {
-                    BadgedBox(
-                        badge = {
-                            Badge(containerColor = StatusPendingAmber) {
-                                Text(
-                                    text = pendingCount.toString(),
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 10.sp
-                                )
-                            }
-                        }
-                    ) {
-                        Icon(imageVector = Icons.Default.Notifications, contentDescription = "Requests")
-                    }
-                } else {
-                    Icon(imageVector = Icons.Default.Notifications, contentDescription = "Requests")
-                }
-            },
-            label = { Text("Requests", fontSize = 11.sp, fontWeight = FontWeight.SemiBold) },
-            colors = NavigationBarItemDefaults.colors(
-                selectedIconColor = Color.Black,
-                indicatorColor = StudioAmber
-            )
-        )
-
-        NavigationBarItem(
-            selected = currentScreen == OwnerScreen.PROFILE,
-            onClick = { onScreenSelected(OwnerScreen.PROFILE) },
-            icon = { Icon(imageVector = Icons.Default.Person, contentDescription = "Profile") },
-            label = { Text("Profile", fontSize = 11.sp, fontWeight = FontWeight.SemiBold) },
-            colors = NavigationBarItemDefaults.colors(
-                selectedIconColor = Color.Black,
-                indicatorColor = StudioAmber
-            )
+            onConfirm = { b -> viewModel.confirmBooking(b) },
+            onReject = { b -> viewModel.rejectBooking(b) }
         )
     }
 }

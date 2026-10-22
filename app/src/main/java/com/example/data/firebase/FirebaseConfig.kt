@@ -1,39 +1,39 @@
 package com.example.data.firebase
 
 import android.content.Context
+import android.util.Log
 import com.google.firebase.FirebaseApp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 
-/**
- * Firebase Configuration for Studio Expo.
- *
- * In Android (Kotlin), Firebase automatically reads configuration
- * from `app/google-services.json` (Project: studio-expo, Package: com.StudioExpo.app).
- *
- * Equivalent to:
- * const app = initializeApp(firebaseConfig);
- * export const auth = getAuth(app);
- */
 object FirebaseConfig {
 
     fun initialize(context: Context): FirebaseApp? {
-        return if (FirebaseApp.getApps(context).isEmpty()) {
-            FirebaseApp.initializeApp(context)
-        } else {
-            FirebaseApp.getInstance()
+        return try {
+            if (FirebaseApp.getApps(context).isEmpty()) {
+                FirebaseApp.initializeApp(context)
+            } else {
+                FirebaseApp.getInstance()
+            }
+        } catch (e: Throwable) {
+            Log.e("FirebaseConfig", "FirebaseApp init: ${e.message}")
+            null
         }
     }
 
-    /**
-     * Firebase Auth instance (Equivalent to `getAuth(app)`)
-     */
-    val auth: FirebaseAuth
-        get() = FirebaseAuth.getInstance()
+    val auth: FirebaseAuth?
+        get() = try {
+            FirebaseAuth.getInstance()
+        } catch (e: Throwable) {
+            Log.e("FirebaseConfig", "FirebaseAuth getInstance: ${e.message}")
+            null
+        }
 
-    /**
-     * Firebase Firestore instance (Equivalent to `getFirestore(app)`)
-     */
-    val firestore: FirebaseFirestore
-        get() = FirebaseFirestore.getInstance()
+    val firestore: FirebaseFirestore?
+        get() = try {
+            FirebaseFirestore.getInstance()
+        } catch (e: Throwable) {
+            Log.e("FirebaseConfig", "FirebaseFirestore getInstance: ${e.message}")
+            null
+        }
 }

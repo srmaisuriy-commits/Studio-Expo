@@ -1,286 +1,132 @@
 package com.example.ui.screens
 
-import android.content.ClipData
-import android.content.ClipboardManager
-import android.content.Context
-import android.widget.Toast
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CameraAlt
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material.icons.filled.Save
-import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.example.data.model.StudioProfile
-import com.example.ui.theme.StatusFreeGreen
 import com.example.ui.theme.StudioAmber
 
 @Composable
 fun MessageTemplateDialog(
     profile: StudioProfile?,
     onDismiss: () -> Unit,
-    onSaveTemplate: (gear: String, note: String, greeting: String, footer: String) -> Unit,
-    onShareClick: (message: String) -> Unit,
-    generateMessage: (gear: String, note: String, greeting: String, footer: String) -> String
+    onSave: (gear: String, note: String, greeting: String, footer: String) -> Unit
 ) {
-    val context = LocalContext.current
-    var selectedTab by remember { mutableIntStateOf(0) } // 0: Edit Message, 1: Live Preview
-
-    var cameraGear by remember(profile) {
-        mutableStateOf(profile?.cameraGearDetails ?: "Sony FX3 / A7 IV • DJI Drone • 4K Cinematic Video • Gimbal & Pro Lights")
-    }
-    var greetingText by remember(profile) {
-        mutableStateOf(profile?.customHeaderGreeting ?: "Hello! Here are our available (FREE) dates for upcoming shoots / नमस्ते! आगामी शूटिंग और इवेंट्स के लिए हमारी उपलब्ध (FREE) तारीखें:")
-    }
-    var customNote by remember(profile) {
-        mutableStateOf(profile?.customWhatsAppNote ?: "Latest 4K Cinematic Camera & Drone Coverage Available / नवीनतम 4K सिनेमैटिक कैमरा और ड्रोन कवरेज उपलब्ध है।")
-    }
-    var footerText by remember(profile) {
-        mutableStateOf(profile?.customFooterNote ?: "Reserve your date early! Contact us on WhatsApp for bookings / अपनी तारीख जल्दी बुक करें! बुकिंग के लिए व्हाट्सएप पर संपर्क करें।")
-    }
-
-    // Live preview string dynamically recomputes as user edits
-    val currentFormattedMessage = remember(cameraGear, greetingText, customNote, footerText, profile) {
-        generateMessage(cameraGear, customNote, greetingText, footerText)
-    }
+    var gear by remember(profile) { mutableStateOf(profile?.cameraGearDetails ?: "") }
+    var note by remember(profile) { mutableStateOf(profile?.customWhatsAppNote ?: "") }
+    var greeting by remember(profile) { mutableStateOf(profile?.customHeaderGreeting ?: "") }
+    var footer by remember(profile) { mutableStateOf(profile?.customFooterNote ?: "") }
 
     Dialog(onDismissRequest = onDismiss) {
         Card(
             modifier = Modifier
                 .fillMaxWidth()
                 .testTag("message_template_dialog"),
-            shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surface
-            ),
-            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+            shape = RoundedCornerShape(20.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
                     .padding(20.dp)
             ) {
-                // Header
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column {
-                        Text(
-                            text = "📝 Set WhatsApp Message",
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            text = "Set message template (Dates sync automatically) / पूरा संदेश सेट करें",
-                            fontSize = 11.sp,
-                            color = StudioAmber
-                        )
-                    }
-                    IconButton(onClick = onDismiss) {
-                        Icon(imageVector = Icons.Default.Close, contentDescription = "Close")
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(10.dp))
-
-                // Tabs: 0: Edit Message, 1: Live Preview
-                TabRow(
-                    selectedTabIndex = selectedTab,
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                    modifier = Modifier.clip(RoundedCornerShape(10.dp))
-                ) {
-                    Tab(
-                        selected = selectedTab == 0,
-                        onClick = { selectedTab = 0 },
-                        text = { Text("✏️ Edit Details", fontSize = 12.sp, fontWeight = FontWeight.Bold) }
-                    )
-                    Tab(
-                        selected = selectedTab == 1,
-                        onClick = { selectedTab = 1 },
-                        text = { Text("👁️ Live Preview", fontSize = 12.sp, fontWeight = FontWeight.Bold) }
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                if (selectedTab == 0) {
-                    // TAB 0: EDIT ALL FIELDS
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(280.dp)
-                            .verticalScroll(rememberScrollState()),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        // 1. Camera Details Field
-                        OutlinedTextField(
-                            value = cameraGear,
-                            onValueChange = { cameraGear = it },
-                            label = { Text("🎥 Camera Details (कैमरा और उपकरण विवरण)") },
-                            placeholder = { Text("Sony FX3, A7 IV, DJI Drone, 4K, Lights") },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .testTag("template_camera_gear_input"),
-                            maxLines = 2
-                        )
-
-                        // 2. Greeting / Header Message
-                        OutlinedTextField(
-                            value = greetingText,
-                            onValueChange = { greetingText = it },
-                            label = { Text("✨ Greeting (शुरुआती संदेश)") },
-                            modifier = Modifier.fillMaxWidth(),
-                            maxLines = 2
-                        )
-
-                        // 3. Special Offer / Note
-                        OutlinedTextField(
-                            value = customNote,
-                            onValueChange = { customNote = it },
-                            label = { Text("💬 Offers / Special Note (विशेष नोट / ऑफ़र)") },
-                            modifier = Modifier.fillMaxWidth(),
-                            maxLines = 2
-                        )
-
-                        // 4. Auto Date Placeholder Info
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(10.dp))
-                                .background(StatusFreeGreen.copy(alpha = 0.12f))
-                                .padding(10.dp)
-                        ) {
-                            Text(
-                                text = "📅 [FREE DATES]: All active 🟢 Free Dates will be automatically listed here! / कैलेंडर की सभी 🟢 उपलब्ध तारीखें यहाँ अपने आप जुड़ेंगी!",
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = StatusFreeGreen
-                            )
-                        }
-
-                        // 5. Footer Note
-                        OutlinedTextField(
-                            value = footerText,
-                            onValueChange = { footerText = it },
-                            label = { Text("📝 Footer Note (निचला नोट / विवरण)") },
-                            modifier = Modifier.fillMaxWidth(),
-                            maxLines = 2
-                        )
-                    }
-                } else {
-                    // TAB 1: LIVE PREVIEW
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(280.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(Color(0xFFEFEAE2)) // WhatsApp chat background tint
-                            .verticalScroll(rememberScrollState())
-                            .padding(14.dp)
-                    ) {
-                        Text(
-                            text = currentFormattedMessage,
-                            fontSize = 12.sp,
-                            color = Color(0xFF111B21),
-                            lineHeight = 18.sp
-                        )
-                    }
-                }
+                Text(
+                    text = "WhatsApp Template / टेम्पलेट",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
 
                 Spacer(modifier = Modifier.height(14.dp))
 
-                // Actions: Save Template & Share on WhatsApp
+                OutlinedTextField(
+                    value = greeting,
+                    onValueChange = { greeting = it },
+                    label = { Text("Header Greeting (नमस्ते/ग्रीटिंग)") },
+                    modifier = Modifier.fillMaxWidth(),
+                    maxLines = 3
+                )
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                OutlinedTextField(
+                    value = gear,
+                    onValueChange = { gear = it },
+                    label = { Text("Camera & Gear Details (कैमरा गियर)") },
+                    modifier = Modifier.fillMaxWidth(),
+                    maxLines = 3
+                )
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                OutlinedTextField(
+                    value = note,
+                    onValueChange = { note = it },
+                    label = { Text("Special Highlights / Note (नोट)") },
+                    modifier = Modifier.fillMaxWidth(),
+                    maxLines = 3
+                )
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                OutlinedTextField(
+                    value = footer,
+                    onValueChange = { footer = it },
+                    label = { Text("Footer Call To Action (कॉल टू एक्शन)") },
+                    modifier = Modifier.fillMaxWidth(),
+                    maxLines = 2
+                )
+
+                Spacer(modifier = Modifier.height(18.dp))
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.End
                 ) {
-                    // Save Button
-                    Button(
-                        onClick = {
-                            onSaveTemplate(cameraGear, customNote, greetingText, footerText)
-                            Toast.makeText(context, "Template saved! / संदेश टेम्पलेट सहेजा गया!", Toast.LENGTH_SHORT).show()
-                            onDismiss()
-                        },
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = StudioAmber),
-                        modifier = Modifier
-                            .weight(1f)
-                            .testTag("save_template_btn")
+                    OutlinedButton(
+                        onClick = onDismiss,
+                        shape = RoundedCornerShape(10.dp)
                     ) {
-                        Icon(imageVector = Icons.Default.Save, contentDescription = null, tint = Color.Black, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = "Save Template 💾",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.Black
-                        )
+                        Text("Cancel")
                     }
 
-                    // Share on WhatsApp Button
+                    Spacer(modifier = Modifier.width(10.dp))
+
                     Button(
-                        onClick = {
-                            onShareClick(currentFormattedMessage)
-                            onDismiss()
-                        },
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = StatusFreeGreen),
-                        modifier = Modifier
-                            .weight(1.2f)
-                            .testTag("share_whatsapp_template_btn")
+                        onClick = { onSave(gear, note, greeting, footer) },
+                        colors = ButtonDefaults.buttonColors(containerColor = StudioAmber),
+                        shape = RoundedCornerShape(10.dp)
                     ) {
-                        Icon(imageVector = Icons.Default.Share, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = "Share WhatsApp 📲",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
-                        )
+                        Text("Save Template", fontWeight = FontWeight.Bold)
                     }
                 }
             }

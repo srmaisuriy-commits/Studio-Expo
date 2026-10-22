@@ -9,74 +9,90 @@ import com.example.data.model.SlotType
 import com.example.data.model.StudioDateSlot
 import com.example.data.model.StudioProfile
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 
-class StudioRepository(private val studioDao: StudioDao) {
+class StudioRepository(private val dao: StudioDao) {
 
-    val profileFlow: Flow<StudioProfile?> = studioDao.getProfileFlow()
-    val allDateSlotsFlow: Flow<List<StudioDateSlot>> = studioDao.getAllDateSlotsFlow()
-    val allBookingsFlow: Flow<List<BookingRequest>> = studioDao.getAllBookingsFlow()
-    val pendingBookingsFlow: Flow<List<BookingRequest>> = studioDao.getPendingBookingsFlow()
-    val currentCustomerBookingsFlow: Flow<List<BookingRequest>> = studioDao.getCurrentCustomerBookingsFlow()
+    val profileFlow: Flow<StudioProfile?> = dao.getProfile()
+    val allDateSlotsFlow: Flow<List<StudioDateSlot>> = dao.getAllDateSlots()
+    val freeDateSlotsFlow: Flow<List<StudioDateSlot>> = dao.getDateSlotsByStatus(DateStatus.FREE)
+    val allBookingsFlow: Flow<List<BookingRequest>> = dao.getAllBookings()
+    val pendingBookingsFlow: Flow<List<BookingRequest>> = dao.getBookingsByStatus(BookingStatus.PENDING)
+
+    val currentCustomerBookingsFlow: Flow<List<BookingRequest>> = dao.getAllBookings().map { list ->
+        list.filter { it.status == BookingStatus.PENDING || it.status == BookingStatus.CONFIRMED }
+    }
+
+    suspend fun getProfileSync(): StudioProfile? = dao.getProfileSync()
 
     suspend fun updateProfile(profile: StudioProfile) {
-        studioDao.insertOrUpdateProfile(profile)
+        dao.updateProfile(profile)
     }
 
-    suspend fun getProfileSync(): StudioProfile? {
-        return studioDao.getProfileSync()
+    suspend fun addFreeDate(
+        dateStr: String,
+        note: String,
+        slotType: SlotType = SlotType.FULL_DAY
+    ) {
+        val slot = StudioDateSlot(
+            dateStr = dateStr,
+            status = DateStatus.FREE,
+            note = note.trim(),
+            slotType = slotType
+        )
+        dao.insertOrUpdateDateSlot(slot)
     }
 
-    // Direct Calendar Date Control: 🟢 SET FREE DATE or 🔴 SET BOOKED DATE
-    suspend fun setDirectDateStatus(dateStr: String, status: DateStatus) {
-        studioDao.setDateStatusDirectly(dateStr, status.name)
+    suspend fun setDirectDateStatus(
+        dateStr: String,
+        status: DateStatus,
+        note: String = ""
+    ) {
+        val existing = dao.getDateSlot(dateStr)
+        val slot = existing?.copy(status = status, note = note)
+            ?: StudioDateSlot(dateStr = dateStr, status = status, note = note)
+        dao.insertOrUpdateDateSlot(slot)
     }
 
-    // Direct Booking on Calendar Date: FREE -> BOOKED with Customer details
+    suspend fun deleteDateSlot(dateStr: String) {
+        dao.deleteDateSlot(dateStr)
+    }
+
     suspend fun createDirectBooking(
         dateStr: String,
         customerName: String,
         customerPhone: String,
         workType: String,
         amount: Double
-    ): Long {
-        return studioDao.createDirectBookingTransaction(
+    ) {
+        // Mark slot as booked
+        val slot = StudioDateSlot(
+            dateStr = dateStr,
+            status = DateStatus.BOOKED,
+            note = "Direct Booking: $workType",
+            bookedCustomerName = customerName,
+            bookedCustomerPhone = customerPhone,
+            workType = workType,
+            amount = amount
+        )
+        dao.insertOrUpdateDateSlot(slot)
+
+        // Record confirmed booking request
+        val booking = BookingRequest(
             dateStr = dateStr,
             customerName = customerName,
             customerPhone = customerPhone,
             workType = workType,
-            amount = amount
+            amount = amount,
+            status = BookingStatus.CONFIRMED
         )
-    }
-
-    suspend fun addOrUpdateFreeDate(
-        dateStr: String,
-        slotType: String = SlotType.FULL_DAY.name,
-        basePrice: Double = 25000.0,
-        note: String = ""
-    ): Long {
-        val slot = StudioDateSlot(
-            dateStr = dateStr,
-            status = DateStatus.FREE.name,
-            slotType = slotType,
-            basePrice = basePrice,
-            note = note,
-            bookedBookingId = null
-        )
-        return studioDao.insertDateSlot(slot)
-    }
-
-    suspend fun deleteDateSlot(dateStr: String) {
-        studioDao.deleteDateSlotByDate(dateStr)
-    }
-
-    suspend fun setDateSlotStatus(dateStr: String, status: DateStatus) {
-        studioDao.updateDateSlotStatus(dateStr, status.name, null)
+        dao.insertBooking(booking)
     }
 
     suspend fun submitCustomerBooking(
         dateStr: String,
-        customerName: String,
-        customerPhone: String,
+        name: String,
+        phone: String,
         workType: String,
         amount: Double,
         location: String,
@@ -84,30 +100,36 @@ class StudioRepository(private val studioDao: StudioDao) {
     ): Long {
         val booking = BookingRequest(
             dateStr = dateStr,
-            customerName = customerName.trim(),
-            customerPhone = customerPhone.trim(),
+            customerName = name.trim(),
+            customerPhone = phone.trim(),
             workType = workType,
             amount = amount,
             location = location.trim(),
             notes = notes.trim(),
-            status = BookingStatus.PENDING.name,
-            isSubmittedByCurrentCustomer = true
+            status = BookingStatus.PENDING
         )
-        return studioDao.insertBooking(booking)
+        return dao.insertBooking(booking)
     }
 
     suspend fun confirmBooking(bookingId: Long, dateStr: String) {
-        studioDao.confirmBookingTransaction(bookingId, dateStr)
+        dao.updateBookingStatus(bookingId, BookingStatus.CONFIRMED)
+        val booking = dao.getBookingById(bookingId)
+        val slot = StudioDateSlot(
+            dateStr = dateStr,
+            status = DateStatus.BOOKED,
+            note = booking?.workType ?: "Booked",
+            bookedCustomerName = booking?.customerName ?: "",
+            bookedCustomerPhone = booking?.customerPhone ?: "",
+            workType = booking?.workType ?: "",
+            amount = booking?.requestedAmount ?: 0.0
+        )
+        dao.insertOrUpdateDateSlot(slot)
     }
 
     suspend fun rejectBooking(bookingId: Long, dateStr: String) {
-        studioDao.rejectBookingTransaction(bookingId, dateStr)
+        dao.updateBookingStatus(bookingId, BookingStatus.REJECTED)
     }
 
-    /**
-     * Dynamically reads all current FREE dates directly from the calendar.
-     * When any date is set to BOOKED, it is instantly and automatically excluded!
-     */
     fun generateWhatsAppShareMessage(
         profile: StudioProfile?,
         dateSlots: List<StudioDateSlot>,
@@ -117,16 +139,16 @@ class StudioRepository(private val studioDao: StudioDao) {
         customFooter: String? = null
     ): String {
         val studioName = profile?.studioName ?: "Studio Expo"
-        val photographer = profile?.photographerName ?: "Photographer"
-        val phone = profile?.whatsapp ?: profile?.phone ?: ""
-        val cameraGear = customCameraGear ?: profile?.cameraGearDetails ?: "Sony FX3 / A7 IV • DJI Drone • 4K Cinematic Setup"
-        val note = customNote ?: profile?.customWhatsAppNote ?: "Latest 4K Cinematic Camera & Drone Coverage Available."
-        val greeting = customGreeting ?: profile?.customHeaderGreeting ?: "Hello! Here are our available (FREE) dates for upcoming events / नमस्ते! आगामी इवेंट्स के लिए हमारी उपलब्ध (FREE) तारीखें:"
-        val footer = customFooter ?: profile?.customFooterNote ?: "Book your special date in advance! Contact us on WhatsApp for bookings & details."
+        val photographer = profile?.photographerName ?: "Rajesh Maisuriya"
+        val phone = profile?.whatsapp ?: profile?.phone ?: "9876543210"
 
-        val sortedFreeSlots = dateSlots
-            .filter { it.status == DateStatus.FREE.name }
-            .sortedBy { it.dateStr }
+        val cameraGear = customCameraGear ?: profile?.cameraGearDetails ?: "Sony FX3 / A7 IV • DJI Drone • 4K Cinematic Video • Gimbal & Pro Lights"
+        val note = customNote ?: profile?.customWhatsAppNote ?: "Latest 4K Cinematic Camera & Drone Coverage Available / नवीनतम 4K सिनेमैटिक कैमरा और ड्रोन कवरेज उपलब्ध है।"
+        val greeting = customGreeting ?: profile?.customHeaderGreeting ?: "Hello! Here are our available (FREE) dates for upcoming wedding & events / नमस्ते! आगामी शादी और इवेंट्स के लिए हमारी उपलब्ध (FREE) तारीखें:"
+        val footer = customFooter ?: profile?.customFooterNote ?: "Reserve your special date today! Contact us on WhatsApp for bookings & details / अपनी तारीख आज ही बुक करें!"
+
+        val freeSlots = dateSlots.filter { it.status == DateStatus.FREE }
+        val sortedFreeSlots = freeSlots.sortedBy { it.dateStr }
 
         val datesText = if (sortedFreeSlots.isEmpty()) {
             "• Currently no dates available. Contact us for custom bookings / वर्तमान में कोई तारीख उपलब्ध नहीं है।"
@@ -138,13 +160,11 @@ class StudioRepository(private val studioDao: StudioDao) {
             }
         }
 
-        // Short summary line like: "22 / 23 / 25"
         val shortDatesSummary = if (sortedFreeSlots.isEmpty()) {
             "None"
         } else {
             sortedFreeSlots.joinToString(" / ") { slot ->
-                val day = slot.dateStr.split("-").lastOrNull() ?: slot.dateStr
-                day
+                slot.dateStr.split("-").lastOrNull() ?: slot.dateStr
             }
         }
 
@@ -172,6 +192,9 @@ $datesText
 
 🔗 *Online Booking Link (ऑनलाइन बुकिंग लिंक):*
 https://studioexpo.app/book/${phone.ifBlank { "studio" }}
+
+🌐 *Official Website Portfolio (वेबसाइट):*
+https://srmaisuriy-commits.github.io/Studio-Expo/
 
 📞 *Contact / WhatsApp (संपर्क):* +91 $phone
 
