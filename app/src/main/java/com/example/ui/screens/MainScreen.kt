@@ -145,7 +145,19 @@ fun MainScreen(
                                     onShareWhatsAppClick = { viewModel.openShareDialog() },
                                     onSetMessageTemplateClick = { viewModel.openMessageTemplateDialog() },
                                     onConfirmBooking = { booking -> viewModel.confirmBooking(booking) },
-                                    onOpenBookingDetail = { booking -> viewModel.openBookingDetail(booking) }
+                                    onOpenBookingDetail = { booking -> viewModel.openBookingDetail(booking) },
+                                    onSaveEditedBooking = { oldDates, newDates, cName, cPhone, workSummary, crewMap, totalAmt ->
+                                        viewModel.updateBookingDetails(oldDates, newDates, cName, cPhone, workSummary, crewMap, totalAmt)
+                                    },
+                                    onCancelBookingDates = { dates ->
+                                        viewModel.cancelBookingForDates(dates)
+                                    },
+                                    onCallCustomer = { phone ->
+                                        viewModel.callCustomer(context, phone)
+                                    },
+                                    onWhatsAppCustomer = { phone, msg ->
+                                        viewModel.openWhatsAppChatWithCustomer(context, phone, msg)
+                                    }
                                 )
                             }
 

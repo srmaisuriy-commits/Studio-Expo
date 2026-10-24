@@ -1,0 +1,50 @@
+{
+  "entities": {
+    "StudioProfile": {
+      "collection": "studio_profile",
+      "fields": {
+        "studioName": { "type": "string" },
+        "photographerName": { "type": "string" },
+        "phone": { "type": "string" },
+        "whatsapp": { "type": "string" },
+        "city": { "type": "string" },
+        "bio": { "type": "string" },
+        "instagramHandle": { "type": "string" },
+        "cameraGearDetails": { "type": "string" },
+        "customWhatsAppNote": { "type": "string" },
+        "customHeaderGreeting": { "type": "string" },
+        "customFooterNote": { "type": "string" },
+        "perDayRate": { "type": "number" }
+      }
+    },
+    "StudioDateSlot": {
+      "collection": "studio_date_slots",
+      "fields": {
+        "dateStr": { "type": "string" },
+        "status": { "type": "string" },
+        "slotType": { "type": "string" },
+        "basePrice": { "type": "number" },
+        "note": { "type": "string" },
+        "bookedCustomerName": { "type": "string" },
+        "bookedCustomerPhone": { "type": "string" },
+        "workType": { "type": "string" },
+        "amount": { "type": "number" },
+        "updatedAt": { "type": "number" }
+      }
+    },
+    "BookingRequest": {
+      "collection": "booking_requests",
+      "fields": {
+        "dateStr": { "type": "string" },
+        "customerName": { "type": "string" },
+        "customerPhone": { "type": "string" },
+        "workType": { "type": "string" },
+        "amount": { "type": "number" },
+        "location": { "type": "string" },
+        "notes": { "type": "string" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "number" }
+      }
+    }
+  }
+}

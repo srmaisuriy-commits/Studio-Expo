@@ -16,7 +16,7 @@ import kotlinx.coroutines.launch
 
 @Database(
     entities = [StudioProfile::class, StudioDateSlot::class, BookingRequest::class],
-    version = 2,
+    version = 3,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -78,10 +78,10 @@ abstract class AppDatabase : RoomDatabase() {
                 val dates = listOf<StudioDateSlot>(
                     StudioDateSlot(dateStr = "2026-10-20", status = DateStatus.FREE, note = "Available for Wedding/Shoot", slotType = SlotType.FULL_DAY),
                     StudioDateSlot(dateStr = "2026-10-22", status = DateStatus.FREE, note = "Available", slotType = SlotType.FULL_DAY),
-                    StudioDateSlot(dateStr = "2026-10-24", status = DateStatus.BOOKED, note = "Wedding in Ahmedabad", slotType = SlotType.FULL_DAY, bookedCustomerName = "Amit Patel", bookedCustomerPhone = "9898012345", workType = "Wedding Ceremony", amount = 50000.0),
-                    StudioDateSlot(dateStr = "2026-10-25", status = DateStatus.BOOKED, note = "Reception Shoot", slotType = SlotType.FULL_DAY, bookedCustomerName = "Amit Patel", bookedCustomerPhone = "9898012345", workType = "Reception Night", amount = 25000.0),
+                    StudioDateSlot(dateStr = "2026-10-24", status = DateStatus.BOOKED, note = "Shoot in Ahmedabad", slotType = SlotType.FULL_DAY, bookedCustomerName = "Amit Patel", bookedCustomerPhone = "9898012345", workType = "Traditional Photographer + Cinematographer", amount = 35000.0),
+                    StudioDateSlot(dateStr = "2026-10-25", status = DateStatus.BOOKED, note = "Candid & Drone Shoot", slotType = SlotType.FULL_DAY, bookedCustomerName = "Amit Patel", bookedCustomerPhone = "9898012345", workType = "Candid Photographer + Drone Pilot", amount = 30000.0),
                     StudioDateSlot(dateStr = "2026-10-28", status = DateStatus.FREE, note = "Available for Booking", slotType = SlotType.FULL_DAY),
-                    StudioDateSlot(dateStr = "2026-11-05", status = DateStatus.FREE, note = "Available for Pre-Wedding", slotType = SlotType.FULL_DAY),
+                    StudioDateSlot(dateStr = "2026-11-05", status = DateStatus.FREE, note = "Available for Shoot", slotType = SlotType.FULL_DAY),
                     StudioDateSlot(dateStr = "2026-11-12", status = DateStatus.FREE, note = "Available", slotType = SlotType.FULL_DAY)
                 )
                 dates.forEach { dao.insertOrUpdateDateSlot(it) }

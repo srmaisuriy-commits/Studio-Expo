@@ -84,6 +84,8 @@ fun OwnerAuthScreen(
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
 
+    var authTab by remember { mutableStateOf(0) } // 0: PIN, 1: Email
+    var enteredPin by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var isPasswordVisible by remember { mutableStateOf(false) }
@@ -126,13 +128,19 @@ fun OwnerAuthScreen(
 
             Text(
                 text = "Welcome to $studioName",
-                fontSize = 26.sp,
+                fontSize = 24.sp,
                 fontWeight = FontWeight.ExtraBold,
                 color = MaterialTheme.colorScheme.onBackground,
                 textAlign = TextAlign.Center
             )
+            Text(
+                text = "Owner Access Portal / स्टूडियो ओनर लॉगिन",
+                fontSize = 13.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center
+            )
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
             // Main Login Card
             Card(
@@ -148,128 +156,233 @@ fun OwnerAuthScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(24.dp),
+                        .padding(20.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Text(
-                        text = if (isSignUpMode) "Sign Up" else "Log In",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-
-                    Spacer(modifier = Modifier.height(18.dp))
-
-                    OutlinedTextField(
-                        value = email,
-                        onValueChange = { email = it },
-                        label = { Text("Email") },
-                        placeholder = { Text("admin@studioexpo.com") },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = Icons.Default.Email,
-                                contentDescription = null,
-                                tint = StudioAmber
-                            )
-                        },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                    // Auth Mode Selector Tabs
+                    Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .testTag("login_email_input"),
-                        singleLine = true
-                    )
-
-                    Spacer(modifier = Modifier.height(14.dp))
-
-                    OutlinedTextField(
-                        value = password,
-                        onValueChange = { password = it },
-                        label = { Text("Password") },
-                        placeholder = { Text("••••••••") },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = Icons.Default.Key,
-                                contentDescription = null,
-                                tint = StudioAmber
-                            )
-                        },
-                        trailingIcon = {
-                            IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) {
-                                Icon(
-                                    imageVector = if (isPasswordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                                    contentDescription = if (isPasswordVisible) "Hide Password" else "Show Password"
-                                )
-                            }
-                        },
-                        visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .testTag("login_password_input"),
-                        singleLine = true
-                    )
-
-                    if (pinError != null) {
-                        Spacer(modifier = Modifier.height(10.dp))
-                        Text(
-                            text = pinError,
-                            fontSize = 12.sp,
-                            color = StatusBookedRed,
-                            fontWeight = FontWeight.Medium,
-                            textAlign = TextAlign.Center
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(20.dp))
-
-                    Button(
-                        onClick = {
-                            if (email.isBlank() || password.isBlank()) {
-                                Toast.makeText(context, "Please enter email and password", Toast.LENGTH_SHORT).show()
-                                return@Button
-                            }
-                            isLoading = true
-                            if (isSignUpMode) {
-                                onEmailSignUp(email, password)
-                            } else {
-                                onEmailLogin(email, password)
-                            }
-                            isLoading = false
-                        },
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF007AFF)),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(50.dp)
-                            .testTag("btn_email_login")
+                            .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(12.dp))
+                            .padding(4.dp),
+                        horizontalArrangement = Arrangement.SpaceEvenly
                     ) {
-                        if (isLoading) {
-                            CircularProgressIndicator(
-                                color = Color.White,
-                                modifier = Modifier.size(22.dp),
-                                strokeWidth = 2.dp
-                            )
-                        } else {
-                            Text(
-                                text = if (isSignUpMode) "Sign Up" else "Log In",
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.White
-                            )
+                        Button(
+                            onClick = { authTab = 0 },
+                            shape = RoundedCornerShape(10.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = if (authTab == 0) StudioAmber else Color.Transparent,
+                                contentColor = if (authTab == 0) Color.Black else MaterialTheme.colorScheme.onSurfaceVariant
+                            ),
+                            elevation = null,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("🔑 Quick PIN", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        }
+                        Button(
+                            onClick = { authTab = 1 },
+                            shape = RoundedCornerShape(10.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = if (authTab == 1) StudioAmber else Color.Transparent,
+                                contentColor = if (authTab == 1) Color.Black else MaterialTheme.colorScheme.onSurfaceVariant
+                            ),
+                            elevation = null,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("✉️ Email / Pass", fontWeight = FontWeight.Bold, fontSize = 13.sp)
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(18.dp))
 
-                    TextButton(
-                        onClick = { isSignUpMode = !isSignUpMode }
-                    ) {
+                    if (authTab == 0) {
+                        // Quick 4-Digit PIN Access
                         Text(
-                            text = if (isSignUpMode) "Already have an account? Log In" else "Don't have an account? Sign Up",
-                            fontSize = 13.sp,
-                            color = MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.SemiBold
+                            text = "Enter Studio PIN (Default: 1234)",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface
                         )
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        OutlinedTextField(
+                            value = enteredPin,
+                            onValueChange = { if (it.length <= 6) enteredPin = it },
+                            label = { Text("4-Digit Owner PIN") },
+                            placeholder = { Text("1234") },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Default.Key,
+                                    contentDescription = null,
+                                    tint = StudioAmber
+                                )
+                            },
+                            visualTransformation = PasswordVisualTransformation(),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("owner_pin_input"),
+                            singleLine = true
+                        )
+
+                        if (pinError != null) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = pinError,
+                                fontSize = 12.sp,
+                                color = StatusBookedRed,
+                                fontWeight = FontWeight.Medium,
+                                textAlign = TextAlign.Center
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        Button(
+                            onClick = {
+                                if (enteredPin.isBlank()) {
+                                    Toast.makeText(context, "Please enter 4-digit PIN", Toast.LENGTH_SHORT).show()
+                                    return@Button
+                                }
+                                onPinEntered(enteredPin)
+                            },
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = StudioAmber),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(48.dp)
+                                .testTag("btn_pin_login")
+                        ) {
+                            Text(
+                                text = "Unlock Owner Dashboard",
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.Black
+                            )
+                        }
+                    } else {
+                        // Email / Password Form
+                        Text(
+                            text = if (isSignUpMode) "Studio Account Sign Up" else "Studio Owner Log In",
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+
+                        Spacer(modifier = Modifier.height(14.dp))
+
+                        OutlinedTextField(
+                            value = email,
+                            onValueChange = { email = it },
+                            label = { Text("Email") },
+                            placeholder = { Text("admin@studioexpo.com") },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Default.Email,
+                                    contentDescription = null,
+                                    tint = StudioAmber
+                                )
+                            },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("login_email_input"),
+                            singleLine = true
+                        )
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        OutlinedTextField(
+                            value = password,
+                            onValueChange = { password = it },
+                            label = { Text("Password / PIN") },
+                            placeholder = { Text("••••••••") },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Default.Key,
+                                    contentDescription = null,
+                                    tint = StudioAmber
+                                )
+                            },
+                            trailingIcon = {
+                                IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) {
+                                    Icon(
+                                        imageVector = if (isPasswordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                                        contentDescription = if (isPasswordVisible) "Hide Password" else "Show Password"
+                                    )
+                                }
+                            },
+                            visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("login_password_input"),
+                            singleLine = true
+                        )
+
+                        if (pinError != null) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = pinError,
+                                fontSize = 12.sp,
+                                color = StatusBookedRed,
+                                fontWeight = FontWeight.Medium,
+                                textAlign = TextAlign.Center
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        Button(
+                            onClick = {
+                                if (email.isBlank() || password.isBlank()) {
+                                    Toast.makeText(context, "Please enter email and password", Toast.LENGTH_SHORT).show()
+                                    return@Button
+                                }
+                                isLoading = true
+                                if (isSignUpMode) {
+                                    onEmailSignUp(email, password)
+                                } else {
+                                    onEmailLogin(email, password)
+                                }
+                                isLoading = false
+                            },
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF007AFF)),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(48.dp)
+                                .testTag("btn_email_login")
+                        ) {
+                            if (isLoading) {
+                                CircularProgressIndicator(
+                                    color = Color.White,
+                                    modifier = Modifier.size(20.dp),
+                                    strokeWidth = 2.dp
+                                )
+                            } else {
+                                Text(
+                                    text = if (isSignUpMode) "Sign Up" else "Log In",
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(6.dp))
+
+                        TextButton(
+                            onClick = { isSignUpMode = !isSignUpMode }
+                        ) {
+                            Text(
+                                text = if (isSignUpMode) "Already have an account? Log In" else "Don't have an account? Sign Up",
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
                     }
 
                     Row(
@@ -293,8 +406,13 @@ fun OwnerAuthScreen(
                             coroutineScope.launch {
                                 try {
                                     val credentialManager = CredentialManager.create(context)
+                                    val webClientId = try {
+                                        context.getString(R.string.default_web_client_id)
+                                    } catch (_: Exception) {
+                                        "112714413477-g5cjkv45pmdieuinr99ejdadrqeg6e59.apps.googleusercontent.com"
+                                    }
                                     val googleIdOption = GetSignInWithGoogleOption.Builder(
-                                        serverClientId = "112714413477-g5cjkv45pmdieuinr99ejdadrqeg6e59.apps.googleusercontent.com"
+                                        serverClientId = webClientId
                                     ).build()
 
                                     val request = GetCredentialRequest.Builder()

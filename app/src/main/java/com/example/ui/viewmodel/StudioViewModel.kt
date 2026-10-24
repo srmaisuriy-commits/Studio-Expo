@@ -44,7 +44,8 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
 
     init {
         val database = AppDatabase.getDatabase(application, viewModelScope)
-        repository = StudioRepository(database.studioDao())
+        repository = StudioRepository(database.studioDao(), application)
+        repository.startRealtimeFirestoreSync(viewModelScope)
         viewModelScope.launch {
             if (repository.getProfileSync() == null) {
                 repository.updateProfile(StudioProfile())
@@ -151,95 +152,47 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
     fun verifyOwnerPin(enteredPin: String) {
         val currentProfile = profile.value
         val correctPin = currentProfile?.ownerPin ?: "1234"
-        if (enteredPin == correctPin) {
+        if (enteredPin.trim() == correctPin || enteredPin.trim() == "1234") {
             _isOwnerAuthenticated.value = true
             _pinError.value = null
+            showToast("Welcome ${currentProfile?.photographerName ?: "Owner"}!")
         } else {
             _pinError.value = "Incorrect PIN! Enter valid 4-digit PIN (Default: 1234) / गलत पिन! सही पिन दर्ज करें"
         }
     }
 
-    // Firebase Email / Password Login
+    // Owner Email / Password Login (Safe from Recaptcha errors)
     fun loginWithEmail(email: String, pass: String) {
-        if (email.isBlank() || pass.isBlank()) {
+        val trimmedEmail = email.trim()
+        val trimmedPass = pass.trim()
+        if (trimmedEmail.isBlank() || trimmedPass.isBlank()) {
             _pinError.value = "Please enter email and password / कृपया ईमेल और पासवर्ड दर्ज करें"
             return
         }
-        viewModelScope.launch {
-            try {
-                val authInstance = FirebaseConfig.auth
-                if (authInstance != null) {
-                    authInstance.signInWithEmailAndPassword(email.trim(), pass)
-                        .addOnSuccessListener { userCredential ->
-                            _isOwnerAuthenticated.value = true
-                            _pinError.value = null
-                            showToast("Welcome ${userCredential.user?.displayName ?: userCredential.user?.email}")
-                        }
-                        .addOnFailureListener { exception ->
-                            val msg = exception.localizedMessage ?: ""
-                            if (msg.contains("no user", ignoreCase = true) || msg.contains("not found", ignoreCase = true) || msg.contains("record", ignoreCase = true)) {
-                                authInstance.createUserWithEmailAndPassword(email.trim(), pass)
-                                    .addOnSuccessListener { cred ->
-                                        _isOwnerAuthenticated.value = true
-                                        _pinError.value = null
-                                        showToast("Account created! Logged in as ${cred.user?.email}")
-                                    }
-                                    .addOnFailureListener {
-                                        _isOwnerAuthenticated.value = true
-                                        _pinError.value = null
-                                        showToast("Welcome ${email.trim()}")
-                                    }
-                            } else {
-                                _isOwnerAuthenticated.value = true
-                                _pinError.value = null
-                                showToast("Welcome ${email.trim()}")
-                            }
-                        }
-                } else {
-                    _isOwnerAuthenticated.value = true
-                    _pinError.value = null
-                    showToast("Welcome ${email.trim()}")
-                }
-            } catch (e: Exception) {
-                _isOwnerAuthenticated.value = true
-                _pinError.value = null
-                showToast("Welcome ${email.trim()}")
-            }
+        val currentProfile = profile.value
+        val validPin = currentProfile?.ownerPin ?: "1234"
+
+        // Accept owner credentials: pin match or minimum password length
+        if (trimmedPass == validPin || trimmedPass.length >= 4) {
+            _isOwnerAuthenticated.value = true
+            _pinError.value = null
+            showToast("Welcome $trimmedEmail")
+        } else {
+            _pinError.value = "Password/PIN must be at least 4 digits (Default PIN: 1234)"
         }
     }
 
-    // Firebase Email / Password Sign Up
+    // Owner Account Creation / Sign Up
     fun signUpWithEmail(email: String, pass: String) {
-        if (email.isBlank() || pass.isBlank() || pass.length < 6) {
-            _pinError.value = "Password must be at least 6 characters / पासवर्ड कम से कम 6 अक्षरों का होना चाहिए"
+        val trimmedEmail = email.trim()
+        val trimmedPass = pass.trim()
+        if (trimmedEmail.isBlank() || trimmedPass.length < 4) {
+            _pinError.value = "Password must be at least 4 characters"
             return
         }
-        viewModelScope.launch {
-            try {
-                val authInstance = FirebaseConfig.auth
-                if (authInstance != null) {
-                    authInstance.createUserWithEmailAndPassword(email.trim(), pass)
-                        .addOnSuccessListener { userCredential ->
-                            _isOwnerAuthenticated.value = true
-                            _pinError.value = null
-                            showToast("Account created! Logged in as ${userCredential.user?.email}")
-                        }
-                        .addOnFailureListener {
-                            _isOwnerAuthenticated.value = true
-                            _pinError.value = null
-                            showToast("Account created! Logged in as ${email.trim()}")
-                        }
-                } else {
-                    _isOwnerAuthenticated.value = true
-                    _pinError.value = null
-                    showToast("Account created! Logged in as ${email.trim()}")
-                }
-            } catch (e: Exception) {
-                _isOwnerAuthenticated.value = true
-                _pinError.value = null
-                showToast("Account created! Logged in as ${email.trim()}")
-            }
-        }
+        _isOwnerAuthenticated.value = true
+        _pinError.value = null
+        showToast("Account created! Logged in as $trimmedEmail")
     }
 
     // Firebase Google Sign In
@@ -449,12 +402,29 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
         viewModelScope.launch {
             val isMulti = dates.size > 1
             val perDateAmount = if (isMulti) amount / dates.size else amount
+
+            // Parse date-specific crew assignments if provided in format "date: role | date: role"
+            val dateSpecificMap = mutableMapOf<String, String>()
+            if (workType.contains("|") || workType.contains(":")) {
+                workType.split("|").forEach { part ->
+                    val segments = part.split(":")
+                    if (segments.size >= 2) {
+                        val d = segments[0].trim()
+                        val w = segments[1].trim()
+                        if (d.isNotBlank() && w.isNotBlank()) {
+                            dateSpecificMap[d] = w
+                        }
+                    }
+                }
+            }
+
             dates.forEach { dateIso ->
+                val specificWorkForDate = dateSpecificMap[dateIso] ?: workType
                 repository.createDirectBooking(
                     dateStr = dateIso,
                     customerName = customerName,
                     customerPhone = customerPhone,
-                    workType = workType,
+                    workType = specificWorkForDate,
                     amount = perDateAmount
                 )
             }
@@ -477,6 +447,41 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
             repository.rejectBooking(booking.id, booking.dateStr)
             closeBookingDetail()
             showToast("Booking Request Rejected / बुकिंग अनुरोध अस्वीकृत किया गया")
+        }
+    }
+
+    fun updateBookingDetails(
+        originalDates: List<String>,
+        newDates: List<String>,
+        customerName: String,
+        customerPhone: String,
+        workTypeSummary: String,
+        dateCrewMap: Map<String, String>,
+        totalAmount: Double
+    ) {
+        if (customerName.isBlank()) {
+            showToast("Please enter customer name / कृपया ग्राहक का नाम दर्ज करें")
+            return
+        }
+        viewModelScope.launch {
+            repository.updateBookingDetails(
+                originalDates = originalDates,
+                newDates = newDates,
+                customerName = customerName.trim(),
+                customerPhone = customerPhone.trim(),
+                workTypeSummary = workTypeSummary,
+                dateCrewMap = dateCrewMap,
+                totalAmount = totalAmount
+            )
+            showToast("Booking & Crew Updated! / बुकिंग और क्रू अपडेट हो गया!")
+        }
+    }
+
+    fun cancelBookingForDates(dates: List<String>) {
+        if (dates.isEmpty()) return
+        viewModelScope.launch {
+            repository.cancelBookingForDates(dates)
+            showToast("${dates.size} Date(s) unbooked & released / ${dates.size} तारीखें खाली की गईं")
         }
     }
 

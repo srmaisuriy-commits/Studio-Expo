@@ -78,6 +78,13 @@ fun OwnerProfileScreen(
     var city by remember(profile) { mutableStateOf(baseProfile.city) }
     var bio by remember(profile) { mutableStateOf(baseProfile.bio) }
     var perDayRateText by remember(profile) { mutableStateOf(baseProfile.perDayRate.toLong().toString()) }
+    var rateTraditionalPhotoText by remember(profile) { mutableStateOf(baseProfile.rateTraditionalPhoto.toLong().toString()) }
+    var rateTraditionalVideoText by remember(profile) { mutableStateOf(baseProfile.rateTraditionalVideo.toLong().toString()) }
+    var rateCandidPhotoText by remember(profile) { mutableStateOf(baseProfile.rateCandidPhoto.toLong().toString()) }
+    var rateSemiCandidPhotoText by remember(profile) { mutableStateOf(baseProfile.rateSemiCandidPhoto.toLong().toString()) }
+    var rateCinematographerText by remember(profile) { mutableStateOf(baseProfile.rateCinematographer.toLong().toString()) }
+    var rateDronePilotText by remember(profile) { mutableStateOf(baseProfile.rateDronePilot.toLong().toString()) }
+    var rateSupportingCrewText by remember(profile) { mutableStateOf(baseProfile.rateSupportingCrew.toLong().toString()) }
     var cameraGear by remember(profile) { mutableStateOf(baseProfile.cameraGearDetails) }
     var customWhatsAppNote by remember(profile) { mutableStateOf(baseProfile.customWhatsAppNote) }
     var pin by remember(profile) { mutableStateOf(baseProfile.ownerPin) }
@@ -97,7 +104,7 @@ fun OwnerProfileScreen(
                 color = TextLightPrimary
             )
             Text(
-                text = "Configure studio branding, pricing rates, and contact info",
+                text = "Configure studio branding, crew package rates, and contact info",
                 fontSize = 12.sp,
                 color = TextLightSecondary
             )
@@ -123,7 +130,7 @@ fun OwnerProfileScreen(
                     OutlinedTextField(
                         value = studioName,
                         onValueChange = { studioName = it },
-                        label = { Text("Studio Name / સ્ટુડિયોનું નામ") },
+                        label = { Text("Studio Name / स्टूडियो का नाम") },
                         leadingIcon = { Icon(Icons.Default.Business, contentDescription = null, tint = StudioAmber) },
                         modifier = Modifier.fillMaxWidth().testTag("profile_studio_name"),
                         singleLine = true,
@@ -136,7 +143,7 @@ fun OwnerProfileScreen(
                     OutlinedTextField(
                         value = photographerName,
                         onValueChange = { photographerName = it },
-                        label = { Text("Owner / Photographer Name") },
+                        label = { Text("Owner / Photographer Name / फोटोग्राफर का नाम") },
                         leadingIcon = { Icon(Icons.Default.Person, contentDescription = null, tint = StudioAmber) },
                         modifier = Modifier.fillMaxWidth().testTag("profile_photographer_name"),
                         singleLine = true,
@@ -149,7 +156,7 @@ fun OwnerProfileScreen(
                     OutlinedTextField(
                         value = city,
                         onValueChange = { city = it },
-                        label = { Text("City / Location / શહેર") },
+                        label = { Text("City / Location / शहर का नाम") },
                         leadingIcon = { Icon(Icons.Default.LocationOn, contentDescription = null, tint = StudioAmber) },
                         modifier = Modifier.fillMaxWidth().testTag("profile_city"),
                         singleLine = true,
@@ -162,7 +169,7 @@ fun OwnerProfileScreen(
                     OutlinedTextField(
                         value = bio,
                         onValueChange = { bio = it },
-                        label = { Text("Bio / Tagline / શોર્ટ વિગત") },
+                        label = { Text("Bio / Tagline / विवरण") },
                         leadingIcon = { Icon(Icons.Default.Badge, contentDescription = null, tint = StudioAmber) },
                         modifier = Modifier.fillMaxWidth().testTag("profile_bio"),
                         colors = OutlinedTextFieldDefaults.colors(
@@ -185,20 +192,108 @@ fun OwnerProfileScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Text(
-                        text = "💰 Pricing & Package Rates",
+                        text = "💰 Crew Package Rates / क्रू पैकेज रेट्स",
                         fontSize = 15.sp,
                         fontWeight = FontWeight.Bold,
                         color = StudioAmber
                     )
+                    Text(
+                        text = "Set daily rates for each crew role (synced to calendar, bill & web page)",
+                        fontSize = 11.sp,
+                        color = TextLightSecondary
+                    )
 
-                    // Per Day Price / Rate (प्रति दिन दर / Daily Rate)
                     OutlinedTextField(
-                        value = perDayRateText,
-                        onValueChange = { perDayRateText = it },
-                        label = { Text("Per Day Rate / પ્રતિ દિવસ દર (₹)") },
-                        leadingIcon = { Icon(Icons.Default.CurrencyRupee, contentDescription = null, tint = StudioAmber) },
+                        value = rateTraditionalPhotoText,
+                        onValueChange = { rateTraditionalPhotoText = it },
+                        label = { Text("📸 Traditional Photographer Rate / ट्रेडिशनल फोटोग्राफर (₹)") },
+                        leadingIcon = { Text("₹", color = StudioAmber, fontWeight = FontWeight.Bold, fontSize = 16.sp, modifier = Modifier.padding(start = 12.dp)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.fillMaxWidth().testTag("profile_per_day_rate"),
+                        modifier = Modifier.fillMaxWidth().testTag("profile_rate_trad_photo"),
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = StudioAmber,
+                            cursorColor = StudioAmber
+                        )
+                    )
+
+                    OutlinedTextField(
+                        value = rateTraditionalVideoText,
+                        onValueChange = { rateTraditionalVideoText = it },
+                        label = { Text("📹 Traditional Videographer Rate / ट्रेडिशनल वीडियोग्राफर (₹)") },
+                        leadingIcon = { Text("₹", color = StudioAmber, fontWeight = FontWeight.Bold, fontSize = 16.sp, modifier = Modifier.padding(start = 12.dp)) },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.fillMaxWidth().testTag("profile_rate_trad_video"),
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = StudioAmber,
+                            cursorColor = StudioAmber
+                        )
+                    )
+
+                    OutlinedTextField(
+                        value = rateCandidPhotoText,
+                        onValueChange = { rateCandidPhotoText = it },
+                        label = { Text("📷 Candid Photographer Rate / कैंडिड फोटोग्राफर (₹)") },
+                        leadingIcon = { Text("₹", color = StudioAmber, fontWeight = FontWeight.Bold, fontSize = 16.sp, modifier = Modifier.padding(start = 12.dp)) },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.fillMaxWidth().testTag("profile_rate_candid_photo"),
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = StudioAmber,
+                            cursorColor = StudioAmber
+                        )
+                    )
+
+                    OutlinedTextField(
+                        value = rateSemiCandidPhotoText,
+                        onValueChange = { rateSemiCandidPhotoText = it },
+                        label = { Text("🎞️ Semi-Candid Photographer Rate / सेमी-कैंडिड फोटोग्राफर (₹)") },
+                        leadingIcon = { Text("₹", color = StudioAmber, fontWeight = FontWeight.Bold, fontSize = 16.sp, modifier = Modifier.padding(start = 12.dp)) },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.fillMaxWidth().testTag("profile_rate_semicandid_photo"),
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = StudioAmber,
+                            cursorColor = StudioAmber
+                        )
+                    )
+
+                    OutlinedTextField(
+                        value = rateCinematographerText,
+                        onValueChange = { rateCinematographerText = it },
+                        label = { Text("🎬 Cinematographer Rate / सिनेमैटोग्राफर (₹)") },
+                        leadingIcon = { Text("₹", color = StudioAmber, fontWeight = FontWeight.Bold, fontSize = 16.sp, modifier = Modifier.padding(start = 12.dp)) },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.fillMaxWidth().testTag("profile_rate_cinematographer"),
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = StudioAmber,
+                            cursorColor = StudioAmber
+                        )
+                    )
+
+                    OutlinedTextField(
+                        value = rateDronePilotText,
+                        onValueChange = { rateDronePilotText = it },
+                        label = { Text("🛸 Drone Pilot Rate / ड्रोन पायलट (₹)") },
+                        leadingIcon = { Text("₹", color = StudioAmber, fontWeight = FontWeight.Bold, fontSize = 16.sp, modifier = Modifier.padding(start = 12.dp)) },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.fillMaxWidth().testTag("profile_rate_drone_pilot"),
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = StudioAmber,
+                            cursorColor = StudioAmber
+                        )
+                    )
+
+                    OutlinedTextField(
+                        value = rateSupportingCrewText,
+                        onValueChange = { rateSupportingCrewText = it },
+                        label = { Text("👥 Supporting Crew Rate / सपोर्टिंग क्रू / असिस्टेंट (₹)") },
+                        leadingIcon = { Text("₹", color = StudioAmber, fontWeight = FontWeight.Bold, fontSize = 16.sp, modifier = Modifier.padding(start = 12.dp)) },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.fillMaxWidth().testTag("profile_rate_supporting_crew"),
                         singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = StudioAmber,
@@ -209,7 +304,7 @@ fun OwnerProfileScreen(
                     OutlinedTextField(
                         value = cameraGear,
                         onValueChange = { cameraGear = it },
-                        label = { Text("Camera Gear / કેમેરા અને સાધન સામગ્રી") },
+                        label = { Text("Camera Gear / कैमरा और उपकरण") },
                         leadingIcon = { Icon(Icons.Default.CameraAlt, contentDescription = null, tint = StudioAmber) },
                         modifier = Modifier.fillMaxWidth().testTag("profile_camera_gear"),
                         colors = OutlinedTextFieldDefaults.colors(
@@ -241,7 +336,7 @@ fun OwnerProfileScreen(
                     OutlinedTextField(
                         value = phone,
                         onValueChange = { phone = it },
-                        label = { Text("Contact Phone / ફોન નંબર") },
+                        label = { Text("Contact Phone / संपर्क फोन नंबर") },
                         leadingIcon = { Icon(Icons.Default.Phone, contentDescription = null, tint = StudioAmber) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                         modifier = Modifier.fillMaxWidth().testTag("profile_phone"),
@@ -255,7 +350,7 @@ fun OwnerProfileScreen(
                     OutlinedTextField(
                         value = whatsapp,
                         onValueChange = { whatsapp = it },
-                        label = { Text("WhatsApp Number / વ્હોટ્સએપ નંબર") },
+                        label = { Text("WhatsApp Number / व्हाट्सएप नंबर") },
                         leadingIcon = { Icon(Icons.Default.Phone, contentDescription = null, tint = StudioAmber) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                         modifier = Modifier.fillMaxWidth().testTag("profile_whatsapp"),
@@ -331,11 +426,18 @@ fun OwnerProfileScreen(
                         bio = bio.trim(),
                         ownerPin = if (pin.isNotBlank()) pin.trim() else "1234",
                         perDayRate = rate,
+                        rateTraditionalPhoto = rateTraditionalPhotoText.toDoubleOrNull() ?: baseProfile.rateTraditionalPhoto,
+                        rateTraditionalVideo = rateTraditionalVideoText.toDoubleOrNull() ?: baseProfile.rateTraditionalVideo,
+                        rateCandidPhoto = rateCandidPhotoText.toDoubleOrNull() ?: baseProfile.rateCandidPhoto,
+                        rateSemiCandidPhoto = rateSemiCandidPhotoText.toDoubleOrNull() ?: baseProfile.rateSemiCandidPhoto,
+                        rateCinematographer = rateCinematographerText.toDoubleOrNull() ?: baseProfile.rateCinematographer,
+                        rateDronePilot = rateDronePilotText.toDoubleOrNull() ?: baseProfile.rateDronePilot,
+                        rateSupportingCrew = rateSupportingCrewText.toDoubleOrNull() ?: baseProfile.rateSupportingCrew,
                         cameraGearDetails = cameraGear.trim(),
                         customWhatsAppNote = customWhatsAppNote.trim()
                     )
                     onSaveProfile(updated)
-                    Toast.makeText(context, "Profile saved successfully! / પ્રોફાઇલ સેવ થઈ ગઈ છે", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "Profile saved successfully! / प्रोफाइल सेव हो गई है!", Toast.LENGTH_SHORT).show()
                 },
                 modifier = Modifier
                     .fillMaxWidth()
@@ -347,7 +449,7 @@ fun OwnerProfileScreen(
                 Icon(Icons.Default.Save, contentDescription = null, tint = Color.Black)
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "Save Profile / પ્રોફાઇલ સાચવો",
+                    text = "Save Profile / प्रोफाइल सेव करें",
                     fontWeight = FontWeight.Bold,
                     fontSize = 16.sp,
                     color = Color.Black
@@ -368,7 +470,7 @@ fun OwnerProfileScreen(
                 Icon(Icons.Default.ExitToApp, contentDescription = null, tint = StatusBookedRed)
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "Log Out Owner / લૉગ આઉટ",
+                    text = "Log Out Owner / लॉग आउट",
                     fontWeight = FontWeight.Bold,
                     fontSize = 15.sp,
                     color = StatusBookedRed

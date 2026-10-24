@@ -1,6 +1,5 @@
 package com.example.ui.screens
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -16,16 +15,13 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Done
-import androidx.compose.material.icons.filled.EditCalendar
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material3.Button
@@ -93,24 +89,46 @@ fun DirectDateControlPanel(
 
     val sortedDates = remember(selectedDates) { selectedDates.sorted() }
     val daysCount = sortedDates.size
-    val perDayRate = profile?.perDayRate ?: 25000.0
 
-    // Direct booking state
-    var showBookingForm by remember { mutableStateOf(false) }
+    val catalogTypes = remember(profile) { WorkTypeCatalog.getTypesForProfile(profile) }
+
+    // Direct booking form states - immediately visible
     var customerName by remember { mutableStateOf("") }
     var customerPhone by remember { mutableStateOf("") }
-    var selectedWorkType by remember { mutableStateOf("Wedding / लग्न") }
-    var customAmount by remember { mutableDoubleStateOf(daysCount * perDayRate) }
-    var amountText by remember { mutableStateOf((daysCount * perDayRate).toLong().toString()) }
 
-    // Update calculated rate when date count changes
-    LaunchedEffect(daysCount, perDayRate) {
-        val calculated = daysCount * perDayRate
+    // Crew selection: multi-crew per date or same crew
+    var differentCrewPerDate by remember(sortedDates) { mutableStateOf(sortedDates.size > 1) }
+
+    var selectedGlobalCrew by remember { mutableStateOf(catalogTypes.first().englishName) }
+
+    var dateSpecificCrewMap by remember(sortedDates) {
+        mutableStateOf(sortedDates.associateWith { catalogTypes.first().englishName })
+    }
+
+    var customAmount by remember { mutableDoubleStateOf(0.0) }
+    var amountText by remember { mutableStateOf("0") }
+
+    // Recalculate amount helper
+    fun recalculate(dates: List<String>, isDateWise: Boolean, crewMap: Map<String, String>, globalCrew: String) {
+        val calculated = if (dates.size > 1 && isDateWise) {
+            dates.sumOf { d ->
+                val role = crewMap[d] ?: globalCrew
+                catalogTypes.find { it.englishName == role }?.defaultEstimate ?: 10000.0
+            }
+        } else {
+            val role = catalogTypes.find { it.englishName == globalCrew } ?: catalogTypes.first()
+            dates.size * role.defaultEstimate
+        }
         customAmount = calculated
         amountText = calculated.toLong().toString()
     }
 
-    // Check if single selected date has booking
+    // Initial and reactive calculation on date or profile changes
+    LaunchedEffect(sortedDates, catalogTypes, differentCrewPerDate) {
+        recalculate(sortedDates, differentCrewPerDate, dateSpecificCrewMap, selectedGlobalCrew)
+    }
+
+    // Check if single selected date has existing booking
     val singleBooking = if (selectedDates.size == 1) {
         val singleDate = selectedDates.first()
         bookings.firstOrNull { it.dateStr == singleDate }
@@ -126,8 +144,9 @@ fun DirectDateControlPanel(
     ) {
         Column(
             modifier = Modifier
-                .padding(16.dp)
-                .verticalScroll(rememberScrollState())
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             // Header Row
             Row(
@@ -143,20 +162,21 @@ fun DirectDateControlPanel(
                         color = TextLightPrimary
                     )
                     Text(
-                        text = "Est. Package: ₹$amountText (₹${perDayRate.toLong()}/day)",
+                        text = "Calculated Package: ₹$amountText",
                         fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
                         color = StudioAmber
                     )
                 }
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = "Clear",
+                        text = "Clear All",
                         fontSize = 12.sp,
                         color = StudioAmber,
                         modifier = Modifier
                             .clickable { onClearAllSelectedDates() }
-                            .padding(8.dp)
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
                     )
                     IconButton(onClick = onClose) {
                         Icon(
@@ -170,9 +190,7 @@ fun DirectDateControlPanel(
 
             // Chips of selected dates
             FlowRow(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 8.dp),
+                modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                 verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
@@ -206,20 +224,9 @@ fun DirectDateControlPanel(
                 }
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
-
-            // Quick Status Actions
-            Text(
-                text = "⚡ Quick Status Actions",
-                fontSize = 13.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = TextLightSecondary
-            )
-
+            // Quick Status Actions (Free, Booked, Request, Reset)
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 8.dp),
+                modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Button(
@@ -228,7 +235,7 @@ fun DirectDateControlPanel(
                     colors = ButtonDefaults.buttonColors(containerColor = StatusFreeGreen),
                     shape = RoundedCornerShape(10.dp)
                 ) {
-                    Text("🟢 Free", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+                    Text("🟢 Free", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.Black)
                 }
 
                 Button(
@@ -237,7 +244,7 @@ fun DirectDateControlPanel(
                     colors = ButtonDefaults.buttonColors(containerColor = StatusBookedRed),
                     shape = RoundedCornerShape(10.dp)
                 ) {
-                    Text("🔴 Booked", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                    Text("🔴 Booked", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White)
                 }
 
                 Button(
@@ -246,7 +253,7 @@ fun DirectDateControlPanel(
                     colors = ButtonDefaults.buttonColors(containerColor = StatusRequestYellow),
                     shape = RoundedCornerShape(10.dp)
                 ) {
-                    Text("🟡 Req", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+                    Text("🟡 Req", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.Black)
                 }
 
                 OutlinedButton(
@@ -254,20 +261,18 @@ fun DirectDateControlPanel(
                     modifier = Modifier.weight(1f).testTag("action_mark_clear"),
                     shape = RoundedCornerShape(10.dp)
                 ) {
-                    Text("⚪ Reset", fontSize = 12.sp, color = TextLightPrimary)
+                    Text("⚪ Reset", fontSize = 11.sp, color = TextLightPrimary)
                 }
             }
 
-            // Existing Booking info for single date
+            // Existing Booking info if single date
             if (singleBooking != null) {
                 Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 8.dp),
+                    modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(containerColor = StudioSurface),
                     shape = RoundedCornerShape(12.dp)
                 ) {
-                    Column(modifier = Modifier.padding(12.dp)) {
+                    Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text(
                             text = "📋 Existing Booking: ${singleBooking.customerName}",
                             fontWeight = FontWeight.Bold,
@@ -285,9 +290,7 @@ fun DirectDateControlPanel(
                             color = TextLightPrimary
                         )
                         Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(top = 8.dp),
+                            modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             Button(
@@ -296,9 +299,9 @@ fun DirectDateControlPanel(
                                 colors = ButtonDefaults.buttonColors(containerColor = StudioAmber),
                                 shape = RoundedCornerShape(8.dp)
                             ) {
-                                Icon(Icons.Default.Call, contentDescription = "Call", modifier = Modifier.size(16.dp))
+                                Icon(Icons.Default.Call, contentDescription = "Call", modifier = Modifier.size(14.dp), tint = Color.Black)
                                 Spacer(modifier = Modifier.width(4.dp))
-                                Text("Call", fontSize = 12.sp, color = Color.Black)
+                                Text("Call", fontSize = 11.sp, color = Color.Black, fontWeight = FontWeight.Bold)
                             }
                             Button(
                                 onClick = {
@@ -309,47 +312,139 @@ fun DirectDateControlPanel(
                                 colors = ButtonDefaults.buttonColors(containerColor = StatusFreeGreen),
                                 shape = RoundedCornerShape(8.dp)
                             ) {
-                                Text("💬 WhatsApp", fontSize = 12.sp, color = Color.Black)
+                                Text("💬 WhatsApp", fontSize = 11.sp, color = Color.Black, fontWeight = FontWeight.Bold)
                             }
                         }
                     }
                 }
             }
 
-            // Direct Booking Section
-            Spacer(modifier = Modifier.height(4.dp))
-            OutlinedButton(
-                onClick = { showBookingForm = !showBookingForm },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag("toggle_direct_booking_form"),
-                shape = RoundedCornerShape(10.dp)
+            // DIRECT CREW SELECTION & BOOKING SECTION (Immediately visible beneath dates as requested)
+            Surface(
+                color = StudioSurface,
+                shape = RoundedCornerShape(14.dp),
+                modifier = Modifier.fillMaxWidth()
             ) {
-                Icon(
-                    imageVector = Icons.Default.EditCalendar,
-                    contentDescription = null,
-                    tint = StudioAmber,
-                    modifier = Modifier.size(16.dp)
-                )
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(
-                    text = if (showBookingForm) "Hide Booking Form" else "📝 Book These Dates with Customer",
-                    color = StudioAmber,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-
-            AnimatedVisibility(visible = showBookingForm) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 10.dp)
+                        .padding(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "👥 Select Crew Roles / क्रू चुनें",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = StudioAmber
+                        )
+                        if (sortedDates.size > 1) {
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = if (differentCrewPerDate) StudioAmber else StudioCard,
+                                modifier = Modifier.clickable {
+                                    differentCrewPerDate = !differentCrewPerDate
+                                    recalculate(sortedDates, differentCrewPerDate, dateSpecificCrewMap, selectedGlobalCrew)
+                                }
+                            ) {
+                                Text(
+                                    text = if (differentCrewPerDate) "Date-wise ON" else "Same Crew",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (differentCrewPerDate) Color.Black else TextLightPrimary,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                )
+                            }
+                        }
+                    }
+
+                    if (sortedDates.size > 1 && differentCrewPerDate) {
+                        // Date-wise different crew selection for each date
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            sortedDates.forEach { dateStr ->
+                                val selectedForThisDate = dateSpecificCrewMap[dateStr] ?: catalogTypes.first().englishName
+                                Card(
+                                    colors = CardDefaults.cardColors(containerColor = StudioCard),
+                                    shape = RoundedCornerShape(10.dp),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Column(modifier = Modifier.padding(10.dp)) {
+                                        Text(
+                                            text = "📅 ${DateUtils.formatForDisplay(dateStr)}",
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 12.sp,
+                                            color = StudioAmber
+                                        )
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        FlowRow(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                                        ) {
+                                            for (workType in catalogTypes) {
+                                                val isSelected = selectedForThisDate == workType.englishName
+                                                Surface(
+                                                    shape = RoundedCornerShape(8.dp),
+                                                    color = if (isSelected) StudioAmber else StudioSurface,
+                                                    modifier = Modifier.clickable {
+                                                        val updatedMap = dateSpecificCrewMap.toMutableMap()
+                                                        updatedMap[dateStr] = workType.englishName
+                                                        dateSpecificCrewMap = updatedMap
+                                                        recalculate(sortedDates, differentCrewPerDate, updatedMap, selectedGlobalCrew)
+                                                    }
+                                                ) {
+                                                    Text(
+                                                        text = "${workType.iconEmoji} ${workType.englishName} • ₹${workType.defaultEstimate.toInt()}",
+                                                        fontSize = 10.sp,
+                                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                                        color = if (isSelected) Color.Black else TextLightPrimary,
+                                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp)
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        // Same Crew Selection Chips across all 7 types
+                        FlowRow(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            for (workType in catalogTypes) {
+                                val isSelected = selectedGlobalCrew == workType.englishName || selectedGlobalCrew == workType.displayName
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = if (isSelected) StudioAmber else StudioCard,
+                                    modifier = Modifier.clickable {
+                                        selectedGlobalCrew = workType.englishName
+                                        recalculate(sortedDates, differentCrewPerDate, dateSpecificCrewMap, workType.englishName)
+                                    }
+                                ) {
+                                    Text(
+                                        text = "${workType.iconEmoji} ${workType.englishName} • ₹${workType.defaultEstimate.toInt()}",
+                                        fontSize = 11.sp,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                        color = if (isSelected) Color.Black else TextLightPrimary,
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // Customer Name
                     OutlinedTextField(
                         value = customerName,
                         onValueChange = { customerName = it },
-                        label = { Text("Customer Name / ગ્રાહકનું નામ") },
+                        label = { Text("Customer Name / ग्राहक का नाम") },
                         leadingIcon = { Icon(Icons.Default.Person, contentDescription = null, tint = StudioAmber) },
                         modifier = Modifier
                             .fillMaxWidth()
@@ -361,12 +456,11 @@ fun DirectDateControlPanel(
                         )
                     )
 
-                    Spacer(modifier = Modifier.height(8.dp))
-
+                    // Customer Mobile
                     OutlinedTextField(
                         value = customerPhone,
                         onValueChange = { customerPhone = it },
-                        label = { Text("Customer Mobile / મોટો નંબર") },
+                        label = { Text("Customer Mobile / मोबाइल नंबर") },
                         leadingIcon = { Icon(Icons.Default.Phone, contentDescription = null, tint = StudioAmber) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                         modifier = Modifier
@@ -379,48 +473,14 @@ fun DirectDateControlPanel(
                         )
                     )
 
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    // Work Type Selection Chips
-                    Text(
-                        text = "Work Type / કામનો પ્રકાર",
-                        fontSize = 12.sp,
-                        color = TextLightSecondary
-                    )
-                    FlowRow(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 4.dp),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        for (workType in WorkTypeCatalog.allTypes) {
-                            val isSelected = selectedWorkType == workType.displayName
-                            Surface(
-                                shape = RoundedCornerShape(8.dp),
-                                color = if (isSelected) StudioAmber else StudioSurface,
-                                modifier = Modifier.clickable { selectedWorkType = workType.displayName }
-                            ) {
-                                Text(
-                                    text = "${workType.iconEmoji} ${workType.englishName}",
-                                    fontSize = 11.sp,
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                    color = if (isSelected) Color.Black else TextLightPrimary,
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                                )
-                            }
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
+                    // Total Package Amount (pre-filled with calculated rate, and editable)
                     OutlinedTextField(
                         value = amountText,
                         onValueChange = {
                             amountText = it
-                            customAmount = it.toDoubleOrNull() ?: (daysCount * perDayRate)
+                            customAmount = it.toDoubleOrNull() ?: 0.0
                         },
-                        label = { Text("Total Package Amount (₹) / કુલ રકમ") },
+                        label = { Text("Total Package Amount (₹) / कुल पैकेज राशि") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         modifier = Modifier
                             .fillMaxWidth()
@@ -432,16 +492,23 @@ fun DirectDateControlPanel(
                         )
                     )
 
-                    Spacer(modifier = Modifier.height(12.dp))
-
+                    // Confirm Booking Button
                     Button(
                         onClick = {
                             if (customerName.isNotBlank() && customerPhone.isNotBlank()) {
+                                val finalWorkSummary = if (sortedDates.size > 1 && differentCrewPerDate) {
+                                    sortedDates.joinToString(" | ") { date ->
+                                        "$date: ${dateSpecificCrewMap[date] ?: selectedGlobalCrew}"
+                                    }
+                                } else {
+                                    selectedGlobalCrew
+                                }
+
                                 onDirectBookingDone(
                                     sortedDates,
                                     customerName.trim(),
                                     customerPhone.trim(),
-                                    selectedWorkType,
+                                    finalWorkSummary,
                                     customAmount
                                 )
                                 onClearAllSelectedDates()
@@ -456,9 +523,10 @@ fun DirectDateControlPanel(
                         Icon(Icons.Default.Done, contentDescription = null, tint = Color.Black)
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = "Confirm Booking for $daysCount Days",
+                            text = "Confirm Booking for $daysCount Day(s) / $daysCount दिनों के लिए बुकिंग कन्फर्म करें",
                             color = Color.Black,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp
                         )
                     }
                 }

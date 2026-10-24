@@ -1,0 +1,36 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isValidBookingRequest() {
+      let data = request.resource.data;
+      return data.customerName is string && data.customerName.size() > 0
+          && data.customerPhone is string && data.customerPhone.size() >= 10
+          && data.dateStr is string
+          && data.status in ['PENDING', 'CONFIRMED', 'REJECTED'];
+    }
+
+    // Studio Profile: Publicly viewable, editable by authenticated owner
+    match /studio_profile/{profileId} {
+      allow read: if true;
+      allow write: if isAuthenticated();
+    }
+
+    // Available and booked dates: Publicly viewable, editable by authenticated owner
+    match /studio_date_slots/{slotId} {
+      allow read: if true;
+      allow write: if isAuthenticated();
+    }
+
+    // Booking Requests: Anyone can submit an inquiry; authenticated owner manages them
+    match /booking_requests/{requestId} {
+      allow create: if isValidBookingRequest();
+      allow read, update, delete: if isAuthenticated();
+    }
+  }
+}

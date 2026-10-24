@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Studio Expo - Public Booking & Availability Calendar</title>
-  <meta name="description" content="Check available dates and book your wedding, pre-wedding, and event photography with Studio Expo.">
+  <title>Studio Expo - Live Photography Crew Booking & Availability</title>
+  <meta name="description" content="Live availability calendar and photography crew booking for Studio Expo (Rajesh Maisuriya).">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Noto+Sans+Gujarati:wght@400;600;700&display=swap" rel="stylesheet">
@@ -20,17 +20,14 @@
       --amber-dark: #A6741B;
       --green: #0F9D58;
       --green-light: #D1F2D9;
-      --green-dark: #025827;
       --red: #D93025;
       --red-light: #FCE8E6;
       --yellow: #F29900;
-      --yellow-light: #FEF0D6;
       --text-primary: #F1F3F4;
       --text-secondary: #9AA0A6;
       --text-muted: #6B7280;
       --border-color: rgba(255, 255, 255, 0.08);
       --font-main: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      --font-gujarati: 'Noto Sans Gujarati', sans-serif;
     }
 
     * {
@@ -48,14 +45,13 @@
       padding-bottom: 80px;
     }
 
-    /* Container */
     .container {
       max-width: 680px;
       margin: 0 auto;
       padding: 16px;
     }
 
-    /* Header Nav */
+    /* Top Bar */
     header.top-header {
       background: var(--surface-dark);
       border-bottom: 1px solid var(--border-color);
@@ -93,7 +89,6 @@
     .brand-title h1 {
       font-size: 1.15rem;
       font-weight: 800;
-      letter-spacing: -0.01em;
       line-height: 1.2;
     }
     .brand-title span {
@@ -103,17 +98,33 @@
       text-transform: uppercase;
       letter-spacing: 0.05em;
     }
-    .app-badge {
-      font-size: 0.75rem;
-      background: rgba(212, 158, 60, 0.15);
-      color: var(--amber-light);
-      padding: 5px 12px;
+    .sync-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.72rem;
+      background: rgba(15, 157, 88, 0.15);
+      color: #4ADE80;
+      padding: 4px 10px;
       border-radius: 20px;
-      border: 1px solid rgba(212, 158, 60, 0.3);
-      font-weight: 600;
+      border: 1px solid rgba(15, 157, 88, 0.3);
+      font-weight: 700;
+    }
+    .sync-pulse {
+      width: 8px;
+      height: 8px;
+      background: #4ADE80;
+      border-radius: 50%;
+      box-shadow: 0 0 8px #4ADE80;
+      animation: pulse 1.8s infinite;
+    }
+    @keyframes pulse {
+      0% { opacity: 0.4; }
+      50% { opacity: 1; }
+      100% { opacity: 0.4; }
     }
 
-    /* Hero Studio Card */
+    /* Hero Card */
     .hero-card {
       background: linear-gradient(180deg, var(--surface-card) 0%, var(--surface-dark) 100%);
       border: 1px solid var(--border-color);
@@ -122,23 +133,6 @@
       margin-top: 16px;
       box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
       position: relative;
-      overflow: hidden;
-    }
-    .hero-card::before {
-      content: '';
-      position: absolute;
-      top: -50px;
-      right: -50px;
-      width: 140px;
-      height: 140px;
-      background: radial-gradient(circle, rgba(212, 158, 60, 0.18) 0%, transparent 70%);
-      border-radius: 50%;
-    }
-    .photographer-meta {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 8px;
     }
     .lead-badge {
       background: var(--amber);
@@ -150,31 +144,25 @@
       text-transform: uppercase;
     }
     .studio-name {
-      font-size: 1.6rem;
+      font-size: 1.55rem;
       font-weight: 800;
       color: var(--text-primary);
-      margin-bottom: 2px;
+      margin-top: 6px;
     }
     .photographer-name {
       color: var(--amber-light);
       font-size: 0.95rem;
       font-weight: 600;
-      display: flex;
-      align-items: center;
-      gap: 6px;
     }
     .studio-location {
       color: var(--text-secondary);
       font-size: 0.82rem;
       margin-top: 4px;
-      display: flex;
-      align-items: center;
-      gap: 6px;
     }
     .bio-text {
       font-size: 0.88rem;
       color: #D1D5DB;
-      margin: 14px 0;
+      margin: 12px 0;
       line-height: 1.45;
     }
     .gear-box {
@@ -184,30 +172,11 @@
       padding: 10px 14px;
       font-size: 0.8rem;
       color: var(--amber-light);
-      display: flex;
-      align-items: center;
-      gap: 8px;
       margin-bottom: 16px;
-    }
-    .pricing-pill {
-      display: inline-flex;
-      align-items: baseline;
-      gap: 6px;
-      background: rgba(15, 157, 88, 0.12);
-      border: 1px solid rgba(15, 157, 88, 0.3);
-      padding: 6px 14px;
-      border-radius: 30px;
-      color: var(--green-light);
-      font-size: 0.85rem;
-    }
-    .pricing-pill strong {
-      font-size: 1.15rem;
-      color: #4ADE80;
     }
     .quick-cta-row {
       display: flex;
       gap: 10px;
-      margin-top: 16px;
     }
     .btn {
       flex: 1;
@@ -228,17 +197,10 @@
       background: #25D366;
       color: #073815;
     }
-    .btn-whatsapp:hover {
-      background: #20bd5a;
-      transform: translateY(-1px);
-    }
     .btn-call {
       background: var(--surface-elevated);
       color: var(--text-primary);
       border: 1px solid var(--border-color);
-    }
-    .btn-call:hover {
-      background: rgba(255, 255, 255, 0.1);
     }
 
     /* Section Card */
@@ -253,7 +215,7 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-bottom: 16px;
+      margin-bottom: 14px;
     }
     .section-title {
       font-size: 1.1rem;
@@ -268,12 +230,12 @@
       margin-top: 2px;
     }
 
-    /* Calendar Legend */
+    /* Legend */
     .legend-row {
       display: flex;
       gap: 12px;
       flex-wrap: wrap;
-      margin-bottom: 16px;
+      margin-bottom: 14px;
       background: rgba(0, 0, 0, 0.2);
       padding: 8px 12px;
       border-radius: 10px;
@@ -291,7 +253,7 @@
       border-radius: 50%;
     }
     .dot-free { background: var(--green); box-shadow: 0 0 6px rgba(15, 157, 88, 0.6); }
-    .dot-booked { background: var(--red); }
+    .dot-booked { background: var(--red); box-shadow: 0 0 6px rgba(217, 48, 37, 0.6); }
     .dot-request { background: var(--yellow); }
 
     /* Calendar Controls */
@@ -313,12 +275,8 @@
       width: 36px;
       height: 36px;
       border-radius: 10px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
       cursor: pointer;
       font-weight: bold;
-      transition: background 0.2s;
     }
     .nav-btn:hover {
       background: var(--amber);
@@ -350,18 +308,14 @@
       align-items: center;
       justify-content: center;
       cursor: pointer;
-      transition: all 0.15s ease;
       position: relative;
       user-select: none;
+      transition: all 0.15s;
     }
     .day-cell.empty {
       background: transparent;
       border: none;
       cursor: default;
-    }
-    .day-cell.past {
-      opacity: 0.35;
-      cursor: not-allowed;
     }
     .day-number {
       font-size: 0.9rem;
@@ -374,19 +328,18 @@
       margin-top: 3px;
     }
     .day-cell.status-free .day-indicator { background: var(--green); }
-    .day-cell.status-booked .day-indicator { background: var(--red); }
-    .day-cell.status-request .day-indicator { background: var(--yellow); }
-
-    .day-cell.status-free {
-      border-color: rgba(15, 157, 88, 0.4);
-    }
     .day-cell.status-booked {
-      border-color: rgba(217, 48, 37, 0.3);
-      background: rgba(217, 48, 37, 0.08);
+      border-color: rgba(217, 48, 37, 0.5);
+      background: rgba(217, 48, 37, 0.12);
+      cursor: not-allowed;
     }
     .day-cell.status-booked .day-number {
       color: #F87171;
     }
+    .day-cell.status-booked .day-indicator {
+      background: var(--red);
+    }
+    .day-cell.status-request .day-indicator { background: var(--yellow); }
 
     .day-cell.selected {
       background: linear-gradient(135deg, var(--amber) 0%, var(--amber-dark) 100%) !important;
@@ -395,14 +348,13 @@
       box-shadow: 0 4px 12px rgba(212, 158, 60, 0.4);
       transform: scale(1.04);
     }
-    .day-cell.selected .day-number {
-      color: #000 !important;
-    }
+    .day-cell.selected .day-number,
     .day-cell.selected .day-indicator {
+      color: #000 !important;
       background: #000 !important;
     }
 
-    /* Selected Dates Badge List */
+    /* Selected Chips */
     .selected-summary-box {
       margin-top: 14px;
       background: rgba(212, 158, 60, 0.1);
@@ -437,53 +389,59 @@
       font-weight: bold;
     }
 
-    /* Work Type Selector */
-    .work-type-grid {
+    /* Crew Roles Grid */
+    .crew-grid {
       display: grid;
-      grid-template-columns: repeat(2, 1fr);
+      grid-template-columns: repeat(1, 1fr);
       gap: 8px;
       margin-top: 10px;
     }
     @media (min-width: 480px) {
-      .work-type-grid {
-        grid-template-columns: repeat(3, 1fr);
+      .crew-grid {
+        grid-template-columns: repeat(2, 1fr);
       }
     }
-    .work-type-card {
+    .crew-card {
       background: var(--surface-dark);
       border: 1px solid var(--border-color);
       border-radius: 12px;
-      padding: 12px 10px;
+      padding: 12px 14px;
       cursor: pointer;
       transition: all 0.15s ease;
       display: flex;
-      flex-direction: column;
-      gap: 4px;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
     }
-    .work-type-card:hover {
+    .crew-card:hover {
       border-color: rgba(212, 158, 60, 0.4);
     }
-    .work-type-card.active {
+    .crew-card.active {
       border-color: var(--amber);
       background: rgba(212, 158, 60, 0.12);
       box-shadow: 0 0 0 1px var(--amber);
     }
-    .wt-header {
+    .crew-info {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .crew-title {
+      font-size: 0.88rem;
+      font-weight: 700;
       display: flex;
       align-items: center;
       gap: 6px;
-      font-size: 0.85rem;
-      font-weight: 700;
     }
-    .wt-sub {
+    .crew-sub {
       font-size: 0.72rem;
       color: var(--text-secondary);
     }
-    .wt-price {
-      font-size: 0.78rem;
-      font-weight: 700;
-      color: var(--green-light);
-      margin-top: auto;
+    .crew-price {
+      font-size: 0.88rem;
+      font-weight: 800;
+      color: #4ADE80;
+      white-space: nowrap;
     }
 
     /* Form Fields */
@@ -507,14 +465,13 @@
       font-size: 0.9rem;
       font-family: inherit;
       outline: none;
-      transition: border-color 0.2s;
     }
     .input-field:focus {
       border-color: var(--amber);
       box-shadow: 0 0 0 2px rgba(212, 158, 60, 0.2);
     }
 
-    /* Quote Summary & Submit */
+    /* Quote Box */
     .quote-box {
       background: linear-gradient(135deg, rgba(212, 158, 60, 0.15) 0%, rgba(15, 157, 88, 0.15) 100%);
       border: 1px solid rgba(212, 158, 60, 0.4);
@@ -549,40 +506,7 @@
       border-radius: 14px;
       box-shadow: 0 6px 20px rgba(37, 211, 102, 0.35);
     }
-    .btn-submit:hover {
-      background: linear-gradient(135deg, #22bf5b 0%, #0e7368 100%);
-      transform: translateY(-2px);
-    }
 
-    /* App download banner */
-    .app-link-card {
-      margin-top: 20px;
-      background: rgba(255, 255, 255, 0.03);
-      border: 1px dashed rgba(255, 255, 255, 0.15);
-      border-radius: 16px;
-      padding: 16px;
-      text-align: center;
-    }
-    .app-link-card p {
-      font-size: 0.82rem;
-      color: var(--text-secondary);
-      margin-bottom: 10px;
-    }
-    .app-btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      background: var(--surface-elevated);
-      color: var(--amber-light);
-      border: 1px solid rgba(212, 158, 60, 0.3);
-      padding: 8px 16px;
-      border-radius: 20px;
-      font-size: 0.82rem;
-      font-weight: 700;
-      text-decoration: none;
-    }
-
-    /* Modal dialog */
     .modal-overlay {
       display: none;
       position: fixed;
@@ -604,13 +528,50 @@
       max-width: 440px;
       width: 100%;
       text-align: center;
-      animation: popIn 0.2s ease-out;
-    }
-    @keyframes popIn {
-      from { transform: scale(0.9); opacity: 0; }
-      to { transform: scale(1); opacity: 1; }
     }
   </style>
+
+  <!-- Firebase v10 SDK for Live Real-Time Firestore Sync -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getFirestore, collection, onSnapshot, setDoc, doc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCvBeK57cMR2uz6G5CyoafpwKsWoZUwRY0",
+      projectId: "studio-expo",
+      storageBucket: "studio-expo.firebasestorage.app",
+      appId: "1:112714413477:android:c212615bcb4564c0d9644c"
+    };
+
+    const fbApp = initializeApp(firebaseConfig);
+    const db = getFirestore(fbApp, "ai-studio-android-studioex-fc0eee82-09e7-4b93-806d-fe80871695cf");
+
+    window.__FIREBASE_DB__ = db;
+    window.__SAVE_BOOKING_REQ__ = async function(data) {
+      try {
+        const docId = data.dateStr + "_" + data.customerPhone;
+        await setDoc(doc(db, "booking_requests", docId), data);
+      } catch (err) {
+        console.error("Firestore booking submit error:", err);
+      }
+    };
+
+    // Live listener for real-time calendar updates from Android app
+    onSnapshot(collection(db, "studio_date_slots"), (snapshot) => {
+      snapshot.forEach((d) => {
+        const item = d.data();
+        const dateKey = item.dateStr || d.id;
+        window.LIVE_DATE_SLOTS[dateKey] = {
+          status: item.status,
+          note: item.note || "",
+          workType: item.workType || ""
+        };
+      });
+      if (window.refreshCalendarUI) {
+        window.refreshCalendarUI();
+      }
+    });
+  </script>
 </head>
 <body>
 
@@ -621,43 +582,40 @@
         <div class="logo-icon">📸</div>
         <div class="brand-title">
           <h1>Studio Expo</h1>
-          <span>Smart Photography Studio</span>
+          <span>Photography & Cinematography</span>
         </div>
       </a>
-      <div class="app-badge">🟢 Online Booking</div>
+      <div class="sync-badge">
+        <div class="sync-pulse"></div>
+        <span>Live Cloud Sync</span>
+      </div>
     </div>
   </header>
 
   <main class="container">
 
-    <!-- Studio Hero Card -->
+    <!-- Hero Card -->
     <div class="hero-card">
-      <div class="photographer-meta">
+      <div style="display: flex; align-items: center; gap: 8px;">
         <span class="lead-badge">Lead Artist</span>
         <span class="photographer-name">Rajesh Maisuriya</span>
       </div>
       <h2 class="studio-name">Studio Expo Photography</h2>
       <div class="studio-location">
-        📍 Ahmedabad, Gujarat • ⭐ 4.9 (120+ Events & Weddings)
+        📍 Ahmedabad, Gujarat • 4K Cinematic & Luxury Shoots
       </div>
 
       <p class="bio-text">
-        Luxury Wedding, Pre-Wedding, Cinematic Film & High-Fashion Photography. Capturing timeless emotion, royal rituals, and modern aesthetics across Gujarat & India.
+        Book professional photography crew members, cinematic directors, and drone pilots for your events across Gujarat & India.
       </p>
 
       <div class="gear-box">
-        🎥 <span><strong>Gear:</strong> Sony FX3 / A7 IV • DJI Drone • 4K Cinematic Video • Pro Gimbal & Soft Lights</span>
-      </div>
-
-      <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
-        <div class="pricing-pill">
-          Standard Rate: <strong>₹25,000</strong> / Day Shoot
-        </div>
+        🎥 <strong>Camera Gear:</strong> Sony FX3 / A7 IV • DJI Drone • Pro Gimbal • Cinematic 4K Video
       </div>
 
       <div class="quick-cta-row">
-        <a href="https://wa.me/919876543210?text=Hello%20Studio%20Expo!%20I%20am%20interested%20in%20booking%20a%20photography%20session." class="btn btn-whatsapp" target="_blank" rel="noopener">
-          💬 WhatsApp
+        <a href="https://wa.me/919876543210?text=Hello%20Studio%20Expo!%20I%20want%20to%20inquire%20about%20booking%20crew%20for%20my%20event." class="btn btn-whatsapp" target="_blank" rel="noopener">
+          💬 WhatsApp Chat
         </a>
         <a href="tel:+919876543210" class="btn btn-call">
           📞 Call Direct
@@ -665,19 +623,19 @@
       </div>
     </div>
 
-    <!-- Booking Step 1: Calendar -->
+    <!-- Step 1: Real-time Live Calendar -->
     <div class="section-card">
       <div class="section-header">
         <div>
           <div class="section-title">📅 Step 1: Select Event Date(s)</div>
-          <div class="section-subtitle">તારીખ પસંદ કરો / Choose your event dates on our live calendar</div>
+          <div class="section-subtitle">कैलेंडर में तारीख चुनें (Live availability synced with studio app)</div>
         </div>
       </div>
 
       <div class="legend-row">
-        <div class="legend-item"><div class="legend-dot dot-free"></div> Free / ઉપલબ્ધ</div>
-        <div class="legend-item"><div class="legend-dot dot-booked"></div> Booked / બુક</div>
-        <div class="legend-item"><div class="legend-dot dot-request"></div> Requested / પેન્ડિંગ</div>
+        <div class="legend-item"><div class="legend-dot dot-free"></div> Free / उपलब्ध</div>
+        <div class="legend-item"><div class="legend-dot dot-booked"></div> Booked / बुक</div>
+        <div class="legend-item"><div class="legend-dot dot-request"></div> Requested / लंबित</div>
       </div>
 
       <div class="calendar-nav">
@@ -702,62 +660,74 @@
       </div>
     </div>
 
-    <!-- Booking Step 2: Work Type -->
+    <!-- Step 2: Photography Crew Selection -->
     <div class="section-card">
       <div class="section-header">
         <div>
-          <div class="section-title">✨ Step 2: Event / Photography Type</div>
-          <div class="section-subtitle">પ્રસંગ / ઇવેન્ટ પ્રકાર પસંદ કરો</div>
+          <div class="section-title">👥 Step 2: Select Photography Crew / Services</div>
+          <div class="section-subtitle">आवश्यकतानुसार क्रू चुनें (Multiple allowed)</div>
         </div>
       </div>
 
-      <div class="work-type-grid" id="workTypeGrid">
+      <div class="crew-grid" id="crewGrid">
         <!-- Rendered by JS -->
+      </div>
+
+      <!-- Price Set Option -->
+      <div class="form-group" style="margin-top: 16px;">
+        <label class="form-label" for="customPriceInput">
+          Set Custom Price (₹) / कस्टम पैकेज रेट (Optional - Default auto calculated)
+        </label>
+        <input type="number" id="customPriceInput" class="input-field" placeholder="Enter custom package rate or leave empty for auto">
       </div>
     </div>
 
-    <!-- Booking Step 3: Customer Details -->
+    <!-- Step 3: Customer Details -->
     <div class="section-card">
       <div class="section-header">
         <div>
           <div class="section-title">👤 Step 3: Customer Details</div>
-          <div class="section-subtitle">તમારી વિગતો દાખલ કરો / Enter your contact details</div>
+          <div class="section-subtitle">अपना विवरण दर्ज करें / Enter your contact details</div>
         </div>
       </div>
 
       <div class="form-group">
-        <label class="form-label" for="custName">Full Name / પૂરું નામ *</label>
+        <label class="form-label" for="custName">Full Name / पूरा नाम *</label>
         <input type="text" id="custName" class="input-field" placeholder="e.g. Amit Patel" required>
       </div>
 
       <div class="form-group">
-        <label class="form-label" for="custPhone">WhatsApp / Mobile Number / મોબાઇલ નંબર *</label>
+        <label class="form-label" for="custPhone">WhatsApp / Mobile Number / मोबाइल नंबर *</label>
         <input type="tel" id="custPhone" class="input-field" placeholder="e.g. 9898012345" required>
       </div>
 
       <div class="form-group">
-        <label class="form-label" for="custLocation">Event Location / સ્થળ (City, Resort, Hall)</label>
+        <label class="form-label" for="custLocation">Venue / Event Location / स्थान (City, Resort, Hall)</label>
         <input type="text" id="custLocation" class="input-field" placeholder="e.g. Karnavati Club, Ahmedabad">
       </div>
 
       <div class="form-group">
-        <label class="form-label" for="custNotes">Special Requests / ખાસ નોંધ (Cinematography, Drone, etc.)</label>
-        <input type="text" id="custNotes" class="input-field" placeholder="e.g. Full day coverage with drone & traditional video">
+        <label class="form-label" for="custNotes">Special Requests / विशेष आवश्यकता</label>
+        <input type="text" id="custNotes" class="input-field" placeholder="e.g. 4K Drone shoot + candid album">
       </div>
 
       <!-- Quote Summary -->
       <div class="quote-box">
         <div class="quote-row">
-          <span style="color: var(--text-secondary);">Event Type:</span>
-          <span id="summaryEventType" style="font-weight: 600;">Wedding Ceremony</span>
+          <span style="color: var(--text-secondary);">Selected Crew:</span>
+          <span id="summaryCrewNames" style="font-weight: 600; text-align: right; max-width: 60%;">Traditional Photographer</span>
         </div>
         <div class="quote-row">
-          <span style="color: var(--text-secondary);">Selected Dates:</span>
-          <span id="summaryDatesCount" style="font-weight: 600;">Please select date</span>
+          <span style="color: var(--text-secondary);">Per Day Rate:</span>
+          <span id="summaryPerDayRate" style="font-weight: 600;">₹10,000</span>
+        </div>
+        <div class="quote-row">
+          <span style="color: var(--text-secondary);">Days Count:</span>
+          <span id="summaryDaysCount" style="font-weight: 600;">1 Day</span>
         </div>
         <div class="quote-row total">
           <span>Estimated Total:</span>
-          <span id="summaryTotalPrice">₹50,000</span>
+          <span id="summaryTotalPrice">₹10,000</span>
         </div>
       </div>
 
@@ -766,23 +736,15 @@
       </button>
     </div>
 
-    <!-- App deep link -->
-    <div class="app-link-card">
-      <p>Have the Studio Expo Android App installed on your device?</p>
-      <a href="studioexpo://book" class="app-btn">
-        📱 Open Studio Expo App
-      </a>
-    </div>
-
   </main>
 
   <!-- Success Modal -->
   <div class="modal-overlay" id="successModal">
     <div class="modal-card">
       <div style="font-size: 48px; margin-bottom: 8px;">🎉</div>
-      <h3 style="font-size: 1.3rem; font-weight: 800; margin-bottom: 6px;">Booking Inquiry Ready!</h3>
+      <h3 style="font-size: 1.3rem; font-weight: 800; margin-bottom: 6px;">Booking Inquiry Sent!</h3>
       <p style="color: var(--text-secondary); font-size: 0.88rem; margin-bottom: 16px;">
-        WhatsApp will open with your complete booking details pre-filled. Tap Send in WhatsApp to deliver your inquiry to Rajesh Maisuriya (Studio Expo).
+        Your inquiry has been synced with Studio Expo's cloud calendar and WhatsApp is ready to send the details to Rajesh Maisuriya.
       </p>
       <button class="btn btn-whatsapp" id="proceedWhatsAppBtn" style="width: 100%;">
         Open WhatsApp Now
@@ -794,54 +756,30 @@
   </div>
 
   <script>
-    // App State
-    const STUDIO_CONFIG = {
-      name: "Studio Expo",
-      photographer: "Rajesh Maisuriya",
-      phone: "9876543210",
-      whatsapp: "9876543210",
-      city: "Ahmedabad, Gujarat",
-      perDayRate: 25000
-    };
-
-    // Catalog of photography types
-    const WORK_TYPES = [
-      { id: "wedding", title: "Wedding Ceremony", hindi: "શાદી / લગ્ન", emoji: "💍", price: 50000 },
-      { id: "pre_wedding", title: "Pre-Wedding Shoot", hindi: "પ્રી-વેડિંગ શૂટ", emoji: "📸", price: 35000 },
-      { id: "sangeet", title: "Sangeet / Engagement", hindi: "સંગીત / સગાઈ", emoji: "🎵", price: 25000 },
-      { id: "reception", title: "Reception Night", hindi: "રિસેપ્શન", emoji: "✨", price: 30000 },
-      { id: "baby_shower", title: "Baby Shower / Maternity", hindi: "બેબી શાવર / શ્રીમંત", emoji: "🍼", price: 20000 },
-      { id: "model_portfolio", title: "Model / Fashion", hindi: "મોડેલ પોર્ટફોલિયો", emoji: "👗", price: 25000 },
-      { id: "studio_portrait", title: "Studio Portrait", hindi: "સ્ટુડિયો પોટ્રેટ", emoji: "🖼️", price: 10000 },
-      { id: "commercial", title: "Commercial / Corporate", hindi: "કોમર્શિયલ ઇવેન્ટ", emoji: "🏢", price: 40000 },
-      { id: "other", title: "Other Shoot", hindi: "અન્ય ફોટોગ્રાફી", emoji: "📷", price: 15000 }
+    // 7 Photographer Crew Roles as requested
+    const CREW_ROLES = [
+      { id: "traditional_photo", title: "Traditional Photographer", hindi: "ट्रेडिशनल फोटोग्राफर", emoji: "📸", price: 10000 },
+      { id: "traditional_video", title: "Traditional Videographer", hindi: "ट्रेडिशनल वीडियोग्राफर", emoji: "📹", price: 12000 },
+      { id: "candid_photo", title: "Candid Photographer", hindi: "कैंडिड फोटोग्राफर", emoji: "📷", price: 18000 },
+      { id: "semi_candid_photo", title: "Semi-Candid Photographer", hindi: "सेमी-कैंडिड फोटोग्राफर", emoji: "🎞️", price: 14000 },
+      { id: "cinematographer", title: "Cinematographer", hindi: "सिनेमैटोग्राफर", emoji: "🎬", price: 25000 },
+      { id: "drone_pilot", title: "Drone Pilot", hindi: "ड्रोन पायलट", emoji: "🛸", price: 12000 },
+      { id: "supporting_crew", title: "Supporting Crew", hindi: "सपोर्टिंग क्रू / असिस्टेंट", emoji: "👥", price: 5000 }
     ];
 
-    // Seeded date slots for demo
-    const DATE_SLOTS = {
-      "2026-10-20": { status: "FREE", note: "Available for Wedding/Shoot" },
-      "2026-10-22": { status: "FREE", note: "Available" },
-      "2026-10-24": { status: "BOOKED", note: "Wedding in Ahmedabad" },
-      "2026-10-25": { status: "BOOKED", note: "Reception Shoot" },
-      "2026-10-28": { status: "FREE", note: "Available for Booking" },
-      "2026-11-05": { status: "FREE", note: "Available for Pre-Wedding" },
-      "2026-11-12": { status: "FREE", note: "Available" },
-      "2026-11-18": { status: "BOOKED", note: "Wedding" },
-      "2026-11-19": { status: "BOOKED", note: "Wedding" },
-      "2026-11-25": { status: "FREE", note: "Available" },
-      "2026-12-05": { status: "FREE", note: "Available" },
-      "2026-12-10": { status: "FREE", note: "Available" },
-      "2026-12-15": { status: "BOOKED", note: "Wedding Ceremony" }
+    // Live Date Slots synced with Firestore
+    window.LIVE_DATE_SLOTS = {
+      "2026-10-24": { status: "BOOKED", note: "Shoot in Ahmedabad" },
+      "2026-10-25": { status: "BOOKED", note: "Candid & Drone Shoot" },
+      "2026-10-28": { status: "FREE", note: "Available" }
     };
 
-    // State variables
     let currentYear = 2026;
-    let currentMonth = 9; // 0-indexed (9 = October)
+    let currentMonth = 9; // October (0-indexed)
     let selectedDates = new Set();
-    let selectedWorkType = WORK_TYPES[0];
+    let selectedCrewIds = new Set(["traditional_photo"]);
     let generatedWhatsAppUrl = "";
 
-    // DOM Elements
     const monthYearLabel = document.getElementById('monthYearLabel');
     const calendarDaysGrid = document.getElementById('calendarDaysGrid');
     const prevMonthBtn = document.getElementById('prevMonthBtn');
@@ -849,86 +787,85 @@
     const selectedDatesSummary = document.getElementById('selectedDatesSummary');
     const selectedCount = document.getElementById('selectedCount');
     const selectedChipsContainer = document.getElementById('selectedChipsContainer');
-    const workTypeGrid = document.getElementById('workTypeGrid');
-    const summaryEventType = document.getElementById('summaryEventType');
-    const summaryDatesCount = document.getElementById('summaryDatesCount');
+    const crewGrid = document.getElementById('crewGrid');
+    const customPriceInput = document.getElementById('customPriceInput');
+    const summaryCrewNames = document.getElementById('summaryCrewNames');
+    const summaryPerDayRate = document.getElementById('summaryPerDayRate');
+    const summaryDaysCount = document.getElementById('summaryDaysCount');
     const summaryTotalPrice = document.getElementById('summaryTotalPrice');
     const sendBookingBtn = document.getElementById('sendBookingBtn');
     const successModal = document.getElementById('successModal');
     const proceedWhatsAppBtn = document.getElementById('proceedWhatsAppBtn');
     const closeModalBtn = document.getElementById('closeModalBtn');
 
-    // Months names
     const MONTH_NAMES = [
       "January", "February", "March", "April", "May", "June",
       "July", "August", "September", "October", "November", "December"
     ];
 
-    // Initialize Page
     function init() {
-      // Auto select a starter date if available
       selectedDates.add("2026-10-28");
-      
-      renderWorkTypes();
+      renderCrewGrid();
       renderCalendar();
       updateSelectedSummary();
       updateQuote();
 
       prevMonthBtn.addEventListener('click', () => {
         currentMonth--;
-        if (currentMonth < 0) {
-          currentMonth = 11;
-          currentYear--;
-        }
+        if (currentMonth < 0) { currentMonth = 11; currentYear--; }
         renderCalendar();
       });
 
       nextMonthBtn.addEventListener('click', () => {
         currentMonth++;
-        if (currentMonth > 11) {
-          currentMonth = 0;
-          currentYear++;
-        }
+        if (currentMonth > 11) { currentMonth = 0; currentYear++; }
         renderCalendar();
       });
 
+      customPriceInput.addEventListener('input', updateQuote);
       sendBookingBtn.addEventListener('click', handleSendBooking);
+
       proceedWhatsAppBtn.addEventListener('click', () => {
-        if (generatedWhatsAppUrl) {
-          window.open(generatedWhatsAppUrl, '_blank');
-        }
+        if (generatedWhatsAppUrl) window.open(generatedWhatsAppUrl, '_blank');
         successModal.classList.remove('active');
       });
-      closeModalBtn.addEventListener('click', () => {
-        successModal.classList.remove('active');
-      });
+      closeModalBtn.addEventListener('click', () => successModal.classList.remove('active'));
+
+      window.refreshCalendarUI = () => {
+        renderCalendar();
+        updateQuote();
+      };
     }
 
-    // Render Work Types
-    function renderWorkTypes() {
-      workTypeGrid.innerHTML = '';
-      WORK_TYPES.forEach(wt => {
+    function renderCrewGrid() {
+      crewGrid.innerHTML = '';
+      CREW_ROLES.forEach(role => {
+        const isSelected = selectedCrewIds.has(role.id);
         const card = document.createElement('div');
-        card.className = `work-type-card ${selectedWorkType.id === wt.id ? 'active' : ''}`;
+        card.className = `crew-card ${isSelected ? 'active' : ''}`;
         card.innerHTML = `
-          <div class="wt-header">
-            <span>${wt.emoji}</span>
-            <span>${wt.title}</span>
+          <div class="crew-info">
+            <div class="crew-title">
+              <span>${role.emoji}</span>
+              <span>${role.title}</span>
+            </div>
+            <div class="crew-sub">${role.hindi || role.title}</div>
           </div>
-          <div class="wt-sub">${wt.hindi}</div>
-          <div class="wt-price">₹${wt.price.toLocaleString('en-IN')}</div>
+          <div class="crew-price">₹${role.price.toLocaleString('en-IN')}</div>
         `;
         card.addEventListener('click', () => {
-          selectedWorkType = wt;
-          document.querySelectorAll('.work-type-card').forEach(c => c.classList.remove('active'));
-          card.classList.add('active');
+          if (selectedCrewIds.has(role.id)) {
+            if (selectedCrewIds.size > 1) selectedCrewIds.delete(role.id);
+          } else {
+            selectedCrewIds.add(role.id);
+          }
+          renderCrewGrid();
           updateQuote();
         });
-        workTypeGrid.appendChild(card);
+        crewGrid.appendChild(card);
       });
     }
 
-    // Render Calendar
     function renderCalendar() {
       monthYearLabel.textContent = `${MONTH_NAMES[currentMonth]} ${currentYear}`;
       calendarDaysGrid.innerHTML = '';
@@ -936,34 +873,27 @@
       const firstDayIndex = new Date(currentYear, currentMonth, 1).getDay();
       const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
 
-      // Empty lead cells
       for (let i = 0; i < firstDayIndex; i++) {
         const emptyCell = document.createElement('div');
         emptyCell.className = 'day-cell empty';
         calendarDaysGrid.appendChild(emptyCell);
       }
 
-      // Day cells
-      const today = new Date();
       for (let day = 1; day <= daysInMonth; day++) {
         const dayCell = document.createElement('div');
         const monthStr = String(currentMonth + 1).padStart(2, '0');
         const dayStr = String(day).padStart(2, '0');
         const isoDate = `${currentYear}-${monthStr}-${dayStr}`;
 
-        const slotInfo = DATE_SLOTS[isoDate];
-        const status = slotInfo ? slotInfo.status : "FREE"; // default to FREE if not marked booked
+        const slotInfo = window.LIVE_DATE_SLOTS[isoDate];
+        const status = slotInfo ? slotInfo.status : "FREE";
 
         let statusClass = "status-free";
         if (status === "BOOKED") statusClass = "status-booked";
         if (status === "REQUEST") statusClass = "status-request";
 
         dayCell.className = `day-cell ${statusClass}`;
-        
-        // Check if selected
-        if (selectedDates.has(isoDate)) {
-          dayCell.classList.add('selected');
-        }
+        if (selectedDates.has(isoDate)) dayCell.classList.add('selected');
 
         dayCell.innerHTML = `
           <div class="day-number">${day}</div>
@@ -972,7 +902,7 @@
 
         dayCell.addEventListener('click', () => {
           if (status === "BOOKED") {
-            alert(`Date ${isoDate} is already booked! Please select another date.`);
+            alert(`Date ${isoDate} is already booked in the studio calendar! Please choose an available date.`);
             return;
           }
 
@@ -990,13 +920,11 @@
       }
     }
 
-    // Update Selected Dates Summary
     function updateSelectedSummary() {
       if (selectedDates.size === 0) {
         selectedDatesSummary.style.display = 'none';
         return;
       }
-
       selectedDatesSummary.style.display = 'flex';
       selectedCount.textContent = selectedDates.size;
       selectedChipsContainer.innerHTML = '';
@@ -1020,7 +948,6 @@
       });
     }
 
-    // Format ISO to Display
     function formatDisplayDate(iso) {
       const parts = iso.split('-');
       if (parts.length === 3) {
@@ -1032,74 +959,91 @@
       return iso;
     }
 
-    // Update Quote
     function updateQuote() {
-      summaryEventType.textContent = `${selectedWorkType.emoji} ${selectedWorkType.title}`;
+      const selectedCrewObjects = CREW_ROLES.filter(r => selectedCrewIds.has(r.id));
+      const crewNames = selectedCrewObjects.map(r => `${r.emoji} ${r.title}`).join(" + ");
+      summaryCrewNames.textContent = crewNames || "None";
+
+      const perDayTotal = selectedCrewObjects.reduce((acc, r) => acc + r.price, 0);
+      summaryPerDayRate.textContent = `₹${perDayTotal.toLocaleString('en-IN')}`;
 
       const daysCount = selectedDates.size;
-      if (daysCount === 0) {
-        summaryDatesCount.textContent = 'None selected';
-        summaryTotalPrice.textContent = '₹0';
-      } else {
-        summaryDatesCount.textContent = `${daysCount} Day${daysCount > 1 ? 's' : ''}`;
-        const total = selectedWorkType.price * daysCount;
-        summaryTotalPrice.textContent = `₹${total.toLocaleString('en-IN')}`;
-      }
+      summaryDaysCount.textContent = daysCount > 0 ? `${daysCount} Day${daysCount > 1 ? 's' : ''}` : 'No date selected';
+
+      const autoTotal = daysCount * perDayTotal;
+      const userCustom = parseFloat(customPriceInput.value);
+      const finalPrice = (!isNaN(userCustom) && userCustom > 0) ? userCustom : autoTotal;
+
+      summaryTotalPrice.textContent = `₹${finalPrice.toLocaleString('en-IN')}`;
     }
 
-    // Handle Send Booking
-    function handleSendBooking() {
+    async function handleSendBooking() {
       const name = document.getElementById('custName').value.trim();
       const phone = document.getElementById('custPhone').value.trim();
       const location = document.getElementById('custLocation').value.trim();
       const notes = document.getElementById('custNotes').value.trim();
 
       if (!name) {
-        alert('Please enter your Full Name / કૃપા કરીને તમારું પૂરું નામ દાખલ કરો.');
+        alert('Please enter your Full Name / कृपया अपना पूरा नाम दर्ज करें।');
         document.getElementById('custName').focus();
         return;
       }
-
       if (!phone || phone.length < 10) {
-        alert('Please enter a valid 10-digit mobile number / કૃપા કરીને માન્ય મોબાઇલ નંબર દાખલ કરો.');
+        alert('Please enter a valid 10-digit mobile number / कृपया 10 अंकों का मोबाइल नंबर दर्ज करें।');
         document.getElementById('custPhone').focus();
         return;
       }
-
       if (selectedDates.size === 0) {
-        alert('Please select at least one event date on the calendar / કૃપા કરીને કેલેન્ડર પર તારીખ પસંદ કરો.');
+        alert('Please select at least one event date on the calendar / कृपया कैलेंडर पर कम से कम एक तारीख चुनें।');
         return;
       }
 
-      const sortedDates = Array.from(selectedDates).sort();
-      const formattedDatesList = sortedDates.map(d => `• ${formatDisplayDate(d)} (${d})`).join('\n');
+      const selectedCrewObjects = CREW_ROLES.filter(r => selectedCrewIds.has(r.id));
+      const crewSummary = selectedCrewObjects.map(r => `${r.emoji} ${r.title}`).join(" + ");
       const daysCount = selectedDates.size;
-      const totalAmount = (selectedWorkType.price * daysCount).toLocaleString('en-IN');
+      const autoTotal = daysCount * selectedCrewObjects.reduce((acc, r) => acc + r.price, 0);
+      const userCustom = parseFloat(customPriceInput.value);
+      const finalAmount = (!isNaN(userCustom) && userCustom > 0) ? userCustom : autoTotal;
 
-      // WhatsApp message construction matching Studio Expo format
+      const sortedDates = Array.from(selectedDates).sort();
+      const datesListStr = sortedDates.map(d => `• ${formatDisplayDate(d)} (${d})`).join('\n');
+
+      // Sync booking request to Firestore
+      if (window.__SAVE_BOOKING_REQ__) {
+        await window.__SAVE_BOOKING_REQ__({
+          customerName: name,
+          customerPhone: phone,
+          dateStr: sortedDates.join(", "),
+          workType: crewSummary,
+          amount: finalAmount,
+          location: location,
+          notes: notes,
+          status: "PENDING",
+          createdAt: Date.now()
+        });
+      }
+
       const messageText = 
-`📸 *NEW BOOKING INQUIRY - STUDIO EXPO*
-----------------------------------------
+`📸 *STUDIO EXPO - NEW CREW BOOKING INQUIRY*
+━━━━━━━━━━━━━━━━━━━━━━━━━━
 👤 *Customer Name:* ${name}
-📞 *Phone / WhatsApp:* ${phone}
-🎉 *Event Type:* ${selectedWorkType.emoji} ${selectedWorkType.title} (${selectedWorkType.hindi})
-📅 *Selected Date(s) (${daysCount} Day${daysCount > 1 ? 's' : ''}):*
-${formattedDatesList}
-📍 *Event Venue / City:* ${location || "To be discussed"}
-💰 *Estimated Package:* ₹${totalAmount}
-📝 *Special Notes / Gear:* ${notes || "Standard 4K Cinematic & Photo"}
-----------------------------------------
-_Sent via Studio Expo Public Booking Portal_`;
+📞 *Contact Phone:* ${phone}
+👥 *Selected Crew / Team:*
+${crewSummary}
+📅 *Event Date(s) (${daysCount} Day${daysCount > 1 ? 's' : ''}):*
+${datesListStr}
+📍 *Venue / City:* ${location || "To be discussed"}
+💰 *Total Estimated Package:* ₹${finalAmount.toLocaleString('en-IN')}
+📝 *Notes:* ${notes || "Standard Coverage"}
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+_Sent via Studio Expo Live Booking Portal_`;
 
-      const studioPhone = STUDIO_CONFIG.whatsapp;
       const encodedMsg = encodeURIComponent(messageText);
-      generatedWhatsAppUrl = `https://api.whatsapp.com/send?phone=91${studioPhone}&text=${encodedMsg}`;
+      generatedWhatsAppUrl = `https://api.whatsapp.com/send?phone=919876543210&text=${encodedMsg}`;
 
-      // Show confirmation modal
       successModal.classList.add('active');
     }
 
-    // Start on load
     window.addEventListener('DOMContentLoaded', init);
   </script>
 </body>

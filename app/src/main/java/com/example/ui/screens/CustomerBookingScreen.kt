@@ -116,12 +116,21 @@ fun CustomerBookingScreen(
 
     var customerName by remember { mutableStateOf("") }
     var customerPhone by remember { mutableStateOf("") }
-    var selectedWorkType by remember { mutableStateOf("Wedding / લગ્ન") }
+    var selectedWorkTypes by remember {
+        mutableStateOf(setOf(WorkTypeCatalog.allTypes.first().englishName))
+    }
+    var customPriceText by remember { mutableStateOf("") }
     var eventLocation by remember { mutableStateOf("") }
     var specialNotes by remember { mutableStateOf("") }
 
+    val catalogTypes = WorkTypeCatalog.getTypesForProfile(profile)
     val daysCount = maxOf(1, selectedDatesSet.size)
-    val calculatedTotal = daysCount * perDayRate
+    val autoEstimatedPerDay = selectedWorkTypes.sumOf { typeName ->
+        catalogTypes.find { it.englishName == typeName }?.defaultEstimate ?: 0.0
+    }
+    val defaultCalculatedTotal = daysCount * (if (autoEstimatedPerDay > 0) autoEstimatedPerDay else perDayRate)
+    val calculatedTotal = customPriceText.toDoubleOrNull() ?: defaultCalculatedTotal
+    val selectedWorkTypeSummary = selectedWorkTypes.joinToString(" + ")
 
     Column(
         modifier = modifier
@@ -363,7 +372,7 @@ fun CustomerBookingScreen(
                 OutlinedTextField(
                     value = customerName,
                     onValueChange = { customerName = it },
-                    label = { Text("Your Full Name / પૂરું નામ") },
+                    label = { Text("Your Full Name / पूरा नाम") },
                     leadingIcon = { Icon(Icons.Default.Person, contentDescription = null, tint = StudioAmber) },
                     modifier = Modifier.fillMaxWidth().testTag("input_customer_name"),
                     singleLine = true,
@@ -376,7 +385,7 @@ fun CustomerBookingScreen(
                 OutlinedTextField(
                     value = customerPhone,
                     onValueChange = { customerPhone = it },
-                    label = { Text("Mobile Number / મોબાઈલ નંબર") },
+                    label = { Text("Mobile Number / मोबाइल नंबर") },
                     leadingIcon = { Icon(Icons.Default.Phone, contentDescription = null, tint = StudioAmber) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                     modifier = Modifier.fillMaxWidth().testTag("input_customer_phone"),
@@ -387,39 +396,74 @@ fun CustomerBookingScreen(
                     )
                 )
 
-                // Work Type Selection
-                Text(
-                    text = "Event / Photography Type",
-                    fontSize = 12.sp,
-                    color = TextLightSecondary
-                )
+                // Crew / Service Selection
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Select Crew / फोटोग्राफी टीम (Multiple allowed)",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = TextLightSecondary
+                    )
+                    Text(
+                        text = "₹${autoEstimatedPerDay.toInt()}/day",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = StudioAmber
+                    )
+                }
                 FlowRow(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                     verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    for (workType in WorkTypeCatalog.allTypes) {
-                        val isSelected = selectedWorkType == workType.displayName
+                    for (workType in catalogTypes) {
+                        val isSelected = selectedWorkTypes.contains(workType.englishName)
                         Surface(
                             shape = RoundedCornerShape(8.dp),
                             color = if (isSelected) StudioAmber else StudioSurface,
-                            modifier = Modifier.clickable { selectedWorkType = workType.displayName }
+                            modifier = Modifier.clickable {
+                                val current = selectedWorkTypes.toMutableSet()
+                                if (current.contains(workType.englishName)) {
+                                    if (current.size > 1) current.remove(workType.englishName)
+                                } else {
+                                    current.add(workType.englishName)
+                                }
+                                selectedWorkTypes = current
+                            }
                         ) {
                             Text(
-                                text = "${workType.iconEmoji} ${workType.englishName}",
+                                text = "${workType.iconEmoji} ${workType.englishName} • ₹${workType.defaultEstimate.toInt()}",
                                 fontSize = 11.sp,
                                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
                                 color = if (isSelected) Color.Black else TextLightPrimary,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp)
                             )
                         }
                     }
                 }
 
                 OutlinedTextField(
+                    value = customPriceText,
+                    onValueChange = { customPriceText = it },
+                    label = { Text("Set Custom Price (₹) / कस्टम पैकेज रेट [Default: ₹${defaultCalculatedTotal.toInt()}]") },
+                    leadingIcon = { Text("₹", color = StudioAmber, fontWeight = FontWeight.Bold, fontSize = 16.sp, modifier = Modifier.padding(start = 12.dp)) },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.fillMaxWidth().testTag("input_customer_custom_price"),
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = StudioAmber,
+                        cursorColor = StudioAmber
+                    )
+                )
+
+                OutlinedTextField(
                     value = eventLocation,
                     onValueChange = { eventLocation = it },
-                    label = { Text("Venue / Event Location / સ્થળ") },
+                    label = { Text("Venue / Event Location / स्थान (Venue)") },
                     leadingIcon = { Icon(Icons.Default.LocationOn, contentDescription = null, tint = StudioAmber) },
                     modifier = Modifier.fillMaxWidth().testTag("input_customer_location"),
                     singleLine = true,
@@ -432,7 +476,7 @@ fun CustomerBookingScreen(
                 OutlinedTextField(
                     value = specialNotes,
                     onValueChange = { specialNotes = it },
-                    label = { Text("Special Requirements / વિગતો (Optional)") },
+                    label = { Text("Special Requirements / विशेष आवश्यकता (Optional)") },
                     leadingIcon = { Icon(Icons.Default.Notes, contentDescription = null, tint = StudioAmber) },
                     modifier = Modifier.fillMaxWidth().testTag("input_customer_notes"),
                     minLines = 2,
@@ -463,7 +507,7 @@ fun CustomerBookingScreen(
                             selectedDatesSet.sorted(),
                             customerName.trim(),
                             customerPhone.trim(),
-                            selectedWorkType,
+                            selectedWorkTypeSummary,
                             calculatedTotal,
                             eventLocation.trim(),
                             specialNotes.trim()
@@ -501,7 +545,7 @@ fun CustomerBookingScreen(
             onDismiss = onDismissSuccess,
             onWhatsApp = {
                 val datesSummary = selectedDatesSet.sorted().joinToString(", ") { DateUtils.formatForDisplay(it) }
-                val msg = "Hello ${studio.photographerName}, I ($customerName) just submitted a booking request for $datesSummary ($selectedWorkType) with ${studio.studioName}!"
+                val msg = "Hello ${studio.photographerName}, I ($customerName) just submitted a booking request for $datesSummary ($selectedWorkTypeSummary) with ${studio.studioName}!"
                 onWhatsAppDirect(studio.whatsapp, msg)
             }
         )

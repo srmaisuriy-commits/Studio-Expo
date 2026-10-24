@@ -130,7 +130,7 @@ fun OwnerCalendarScreen(
             ) {
                 Text(text = "💡 ", fontSize = 16.sp)
                 Text(
-                    text = "Tap any date to select. Multi-select consecutive dates to calculate wedding packages automatically at ₹${(profile?.perDayRate ?: 25000.0).toLong()}/day.",
+                    text = "Tap any date to select. Pick from your 7 Crew Package Rates (ट्रेडिशनल, कैंडिड, ड्रोन आदि) to calculate total package automatically.",
                     fontSize = 11.sp,
                     color = TextLightSecondary
                 )
