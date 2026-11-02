@@ -43,8 +43,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
@@ -73,8 +75,10 @@ fun OwnerProfileScreen(
 
     var studioName by remember(profile) { mutableStateOf(baseProfile.studioName) }
     var photographerName by remember(profile) { mutableStateOf(baseProfile.photographerName) }
-    var phone by remember(profile) { mutableStateOf(baseProfile.phone) }
-    var whatsapp by remember(profile) { mutableStateOf(baseProfile.whatsapp) }
+    val initialPhone = if (baseProfile.phone == "9876543210" || baseProfile.phone == "9898012345" || baseProfile.phone.isBlank()) "+91 XXXXX XX520" else baseProfile.phone
+    val initialWhatsapp = if (baseProfile.whatsapp == "9876543210" || baseProfile.whatsapp == "9898012345" || baseProfile.whatsapp.isBlank()) "+91 XXXXX XX520" else baseProfile.whatsapp
+    var phone by remember(profile) { mutableStateOf(initialPhone) }
+    var whatsapp by remember(profile) { mutableStateOf(initialWhatsapp) }
     var city by remember(profile) { mutableStateOf(baseProfile.city) }
     var bio by remember(profile) { mutableStateOf(baseProfile.bio) }
     var perDayRateText by remember(profile) { mutableStateOf(baseProfile.perDayRate.toLong().toString()) }
@@ -87,7 +91,6 @@ fun OwnerProfileScreen(
     var rateSupportingCrewText by remember(profile) { mutableStateOf(baseProfile.rateSupportingCrew.toLong().toString()) }
     var cameraGear by remember(profile) { mutableStateOf(baseProfile.cameraGearDetails) }
     var customWhatsAppNote by remember(profile) { mutableStateOf(baseProfile.customWhatsAppNote) }
-    var pin by remember(profile) { mutableStateOf(baseProfile.ownerPin) }
 
     LazyColumn(
         modifier = modifier
@@ -336,7 +339,8 @@ fun OwnerProfileScreen(
                     OutlinedTextField(
                         value = phone,
                         onValueChange = { phone = it },
-                        label = { Text("Contact Phone / संपर्क फोन नंबर") },
+                        label = { Text("Contact Phone / સંપર્ક ફોન નંબર") },
+                        placeholder = { Text("+91 XXXXX XX520") },
                         leadingIcon = { Icon(Icons.Default.Phone, contentDescription = null, tint = StudioAmber) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                         modifier = Modifier.fillMaxWidth().testTag("profile_phone"),
@@ -350,7 +354,8 @@ fun OwnerProfileScreen(
                     OutlinedTextField(
                         value = whatsapp,
                         onValueChange = { whatsapp = it },
-                        label = { Text("WhatsApp Number / व्हाट्सएप नंबर") },
+                        label = { Text("WhatsApp Number / વ્હોટ્સએપ નંબર") },
+                        placeholder = { Text("+91 XXXXX XX520") },
                         leadingIcon = { Icon(Icons.Default.Phone, contentDescription = null, tint = StudioAmber) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                         modifier = Modifier.fillMaxWidth().testTag("profile_whatsapp"),
@@ -377,41 +382,6 @@ fun OwnerProfileScreen(
             }
         }
 
-        // Security PIN Card
-        item {
-            Card(
-                colors = CardDefaults.cardColors(containerColor = StudioCard),
-                shape = RoundedCornerShape(14.dp)
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Text(
-                        text = "🔒 Owner Security PIN",
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = StudioAmber
-                    )
-
-                    OutlinedTextField(
-                        value = pin,
-                        onValueChange = { if (it.length <= 6) pin = it },
-                        label = { Text("Security PIN (4-6 digits)") },
-                        leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null, tint = StudioAmber) },
-                        visualTransformation = PasswordVisualTransformation(),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
-                        modifier = Modifier.fillMaxWidth().testTag("profile_owner_pin"),
-                        singleLine = true,
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = StudioAmber,
-                            cursorColor = StudioAmber
-                        )
-                    )
-                }
-            }
-        }
-
         // Action Buttons
         item {
             Button(
@@ -424,7 +394,7 @@ fun OwnerProfileScreen(
                         whatsapp = whatsapp.trim(),
                         city = city.trim(),
                         bio = bio.trim(),
-                        ownerPin = if (pin.isNotBlank()) pin.trim() else "1234",
+                        ownerPin = baseProfile.ownerPin,
                         perDayRate = rate,
                         rateTraditionalPhoto = rateTraditionalPhotoText.toDoubleOrNull() ?: baseProfile.rateTraditionalPhoto,
                         rateTraditionalVideo = rateTraditionalVideoText.toDoubleOrNull() ?: baseProfile.rateTraditionalVideo,

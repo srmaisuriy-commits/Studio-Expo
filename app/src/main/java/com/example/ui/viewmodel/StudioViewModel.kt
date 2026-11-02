@@ -47,11 +47,24 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
         repository = StudioRepository(database.studioDao(), application)
         repository.startRealtimeFirestoreSync(viewModelScope)
         viewModelScope.launch {
-            if (repository.getProfileSync() == null) {
+            val current = repository.getProfileSync()
+            if (current == null) {
                 repository.updateProfile(StudioProfile())
+            } else {
+                var updated = current
+                if (current.phone == "9876543210" || current.phone == "9898012345" || current.phone.isBlank()) {
+                    updated = updated.copy(phone = "+91 XXXXX XX520")
+                }
+                if (current.whatsapp == "9876543210" || current.whatsapp == "9898012345" || current.whatsapp.isBlank()) {
+                    updated = updated.copy(whatsapp = "+91 XXXXX XX520")
+                }
+                repository.updateProfile(updated)
             }
+            repository.sanitizeOldDemoNumbers()
         }
     }
+
+    fun getWebBookingUrl(): String = repository.getWebBookingUrl()
 
     // Role state
     private val _currentRole = MutableStateFlow(AppRole.OWNER)

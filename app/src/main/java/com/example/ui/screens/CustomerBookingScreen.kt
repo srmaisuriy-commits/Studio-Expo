@@ -38,6 +38,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -116,21 +117,65 @@ fun CustomerBookingScreen(
 
     var customerName by remember { mutableStateOf("") }
     var customerPhone by remember { mutableStateOf("") }
-    var selectedWorkTypes by remember {
-        mutableStateOf(setOf(WorkTypeCatalog.allTypes.first().englishName))
+    var dateWiseCrewMap by remember {
+        mutableStateOf(mapOf<String, Set<String>>())
     }
     var customPriceText by remember { mutableStateOf("") }
     var eventLocation by remember { mutableStateOf("") }
     var specialNotes by remember { mutableStateOf("") }
 
-    val catalogTypes = WorkTypeCatalog.getTypesForProfile(profile)
-    val daysCount = maxOf(1, selectedDatesSet.size)
-    val autoEstimatedPerDay = selectedWorkTypes.sumOf { typeName ->
-        catalogTypes.find { it.englishName == typeName }?.defaultEstimate ?: 0.0
+    val catalogTypes = remember(profile) { WorkTypeCatalog.getTypesForProfile(profile) }
+    val sortedDates = selectedDatesSet.sorted()
+    val daysCount = maxOf(1, sortedDates.size)
+
+    fun getCrewForDate(dateStr: String): Set<String> {
+        val existing = dateWiseCrewMap[dateStr]
+        if (existing != null && existing.isNotEmpty()) return existing
+        return setOf(catalogTypes.first().englishName)
     }
-    val defaultCalculatedTotal = daysCount * (if (autoEstimatedPerDay > 0) autoEstimatedPerDay else perDayRate)
+
+    fun toggleCrewForDate(dateStr: String, typeName: String) {
+        val current = getCrewForDate(dateStr).toMutableSet()
+        if (current.contains(typeName)) {
+            if (current.size > 1) {
+                current.remove(typeName)
+            }
+        } else {
+            current.add(typeName)
+        }
+        dateWiseCrewMap = dateWiseCrewMap + (dateStr to current)
+    }
+
+    fun getDailyTotal(dateStr: String): Double {
+        val crew = getCrewForDate(dateStr)
+        val sum = crew.sumOf { typeName ->
+            catalogTypes.find { it.englishName == typeName }?.defaultEstimate ?: 0.0
+        }
+        return if (sum > 0) sum else perDayRate
+    }
+
+    val autoCalculatedPackageTotal = if (sortedDates.isNotEmpty()) {
+        sortedDates.sumOf { dateStr -> getDailyTotal(dateStr) }
+    } else {
+        perDayRate
+    }
+    val defaultCalculatedTotal = autoCalculatedPackageTotal
     val calculatedTotal = customPriceText.toDoubleOrNull() ?: defaultCalculatedTotal
-    val selectedWorkTypeSummary = selectedWorkTypes.joinToString(" + ")
+
+    val selectedWorkTypeSummary = if (sortedDates.isEmpty()) {
+        catalogTypes.first().englishName
+    } else if (sortedDates.size == 1) {
+        val singleDate = sortedDates.first()
+        getCrewForDate(singleDate).joinToString(" + ")
+    } else {
+        sortedDates.joinToString(" | ") { d ->
+            val dateDisplay = DateUtils.formatForDisplay(d)
+            val crewDisplay = getCrewForDate(d).joinToString(" + ") { name ->
+                catalogTypes.find { it.englishName == name }?.let { "${it.iconEmoji} ${it.englishName}" } ?: name
+            }
+            "$dateDisplay: $crewDisplay"
+        }
+    }
 
     Column(
         modifier = modifier
@@ -282,7 +327,7 @@ fun CustomerBookingScreen(
                 color = TextLightPrimary
             )
             Text(
-                text = "Green = Available (FREE) • Red = Already Booked",
+                text = "🟢 Green = Available • 🟡 Yellow = Requested • 🔴 Red = Booked",
                 fontSize = 12.sp,
                 color = TextLightSecondary
             )
@@ -333,42 +378,6 @@ fun CustomerBookingScreen(
                     color = StudioAmber
                 )
 
-                // Selected dates display & package calculation
-                if (selectedDatesSet.isNotEmpty()) {
-                    Surface(
-                        color = StudioSurface,
-                        shape = RoundedCornerShape(10.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Column(modifier = Modifier.padding(10.dp)) {
-                            Text(
-                                text = "Selected Dates (${selectedDatesSet.size} Day${if (selectedDatesSet.size > 1) "s" else ""}):",
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = StudioAmber
-                            )
-                            Text(
-                                text = selectedDatesSet.sorted().joinToString(", ") { DateUtils.formatForDisplay(it) },
-                                fontSize = 12.sp,
-                                color = TextLightPrimary
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = "Estimated Package: ₹${calculatedTotal.toLong()} (₹${perDayRate.toLong()} × $daysCount days)",
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = StatusFreeGreen
-                            )
-                        }
-                    }
-                } else {
-                    Text(
-                        text = "👉 Please tap one or more dates on the calendar above to begin.",
-                        fontSize = 12.sp,
-                        color = StudioAmber
-                    )
-                }
-
                 OutlinedTextField(
                     value = customerName,
                     onValueChange = { customerName = it },
@@ -385,7 +394,8 @@ fun CustomerBookingScreen(
                 OutlinedTextField(
                     value = customerPhone,
                     onValueChange = { customerPhone = it },
-                    label = { Text("Mobile Number / मोबाइल नंबर") },
+                    label = { Text("Mobile Number / મોબાઈલ નંબર") },
+                    placeholder = { Text("+91 XXXXX XX520") },
                     leadingIcon = { Icon(Icons.Default.Phone, contentDescription = null, tint = StudioAmber) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                     modifier = Modifier.fillMaxWidth().testTag("input_customer_phone"),
@@ -396,54 +406,147 @@ fun CustomerBookingScreen(
                     )
                 )
 
-                // Crew / Service Selection
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+                // Date-wise Crew Selection (Freelance workflow: 1 Date -> Crew, 2 Date -> Crew, etc.)
+                if (sortedDates.isNotEmpty()) {
                     Text(
-                        text = "Select Crew / फोटोग्राफी टीम (Multiple allowed)",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = TextLightSecondary
-                    )
-                    Text(
-                        text = "₹${autoEstimatedPerDay.toInt()}/day",
-                        fontSize = 12.sp,
+                        text = "👥 Select Crew Per Date / તારીખ દીઠ ટીમ પસંદ કરો:",
+                        fontSize = 13.sp,
                         fontWeight = FontWeight.Bold,
                         color = StudioAmber
                     )
-                }
-                FlowRow(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    for (workType in catalogTypes) {
-                        val isSelected = selectedWorkTypes.contains(workType.englishName)
-                        Surface(
-                            shape = RoundedCornerShape(8.dp),
-                            color = if (isSelected) StudioAmber else StudioSurface,
-                            modifier = Modifier.clickable {
-                                val current = selectedWorkTypes.toMutableSet()
-                                if (current.contains(workType.englishName)) {
-                                    if (current.size > 1) current.remove(workType.englishName)
-                                } else {
-                                    current.add(workType.englishName)
-                                }
-                                selectedWorkTypes = current
-                            }
+
+                    sortedDates.forEachIndexed { index, dateStr ->
+                        val dateDisplay = DateUtils.formatForDisplay(dateStr)
+                        val dayTotal = getDailyTotal(dateStr)
+                        val selectedCrewThisDay = getCrewForDate(dateStr)
+
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = CardDefaults.cardColors(containerColor = StudioSurface),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, StudioAmber.copy(alpha = 0.35f))
                         ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(12.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Box(
+                                            modifier = Modifier
+                                                .clip(RoundedCornerShape(6.dp))
+                                                .background(StudioAmber.copy(alpha = 0.2f))
+                                                .padding(horizontal = 7.dp, vertical = 3.dp)
+                                        ) {
+                                            Text(
+                                                text = "Day ${index + 1}",
+                                                fontSize = 11.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = StudioAmber
+                                            )
+                                        }
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(
+                                            text = dateDisplay,
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = TextLightPrimary
+                                        )
+                                    }
+
+                                    // Day Subtotal
+                                    Text(
+                                        text = "₹${dayTotal.toInt()}",
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = StatusFreeGreen
+                                    )
+                                }
+
+                                Text(
+                                    text = "Select services for this day / આ દિવસ માટે ક્રૂ:",
+                                    fontSize = 11.sp,
+                                    color = TextLightSecondary
+                                )
+
+                                FlowRow(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    for (workType in catalogTypes) {
+                                        val isSelected = selectedCrewThisDay.contains(workType.englishName)
+                                        Surface(
+                                            shape = RoundedCornerShape(8.dp),
+                                            color = if (isSelected) StudioAmber else StudioCard,
+                                            border = if (isSelected) null else androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.08f)),
+                                            modifier = Modifier.clickable {
+                                                toggleCrewForDate(dateStr, workType.englishName)
+                                            }
+                                        ) {
+                                            Text(
+                                                text = "${workType.iconEmoji} ${workType.englishName} • ₹${workType.defaultEstimate.toInt()}",
+                                                fontSize = 11.sp,
+                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                                color = if (isSelected) Color.Black else TextLightPrimary,
+                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // Total Package Card (Clean single card replacing day-by-day summary)
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("customer_total_package_card"),
+                        shape = RoundedCornerShape(14.dp),
+                        colors = CardDefaults.cardColors(containerColor = StudioSurface),
+                        border = androidx.compose.foundation.BorderStroke(1.5.dp, StudioAmber)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 14.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column {
+                                Text(
+                                    text = "💰 Total Package (${sortedDates.size} Day${if (sortedDates.size > 1) "s" else ""})",
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = StudioAmber
+                                )
+                                Text(
+                                    text = "Total calculated across all selected dates & crew",
+                                    fontSize = 11.sp,
+                                    color = TextLightSecondary
+                                )
+                            }
                             Text(
-                                text = "${workType.iconEmoji} ${workType.englishName} • ₹${workType.defaultEstimate.toInt()}",
-                                fontSize = 11.sp,
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                color = if (isSelected) Color.Black else TextLightPrimary,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp)
+                                text = "₹${calculatedTotal.toLong()}",
+                                fontSize = 22.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = StatusFreeGreen
                             )
                         }
                     }
+                } else {
+                    Text(
+                        text = "👉 Please tap one or more dates on the calendar above to begin.",
+                        fontSize = 12.sp,
+                        color = StudioAmber
+                    )
                 }
 
                 OutlinedTextField(
@@ -531,6 +634,9 @@ fun CustomerBookingScreen(
                 }
             }
         }
+
+        // Non-disturbing Google AdMob Banner
+        com.example.ui.components.AdMobBannerView()
 
         Spacer(modifier = Modifier.height(24.dp))
     }

@@ -55,23 +55,12 @@ fun MainScreen(
     Scaffold(
         modifier = modifier.fillMaxSize(),
         topBar = {
-            if (currentRole == AppRole.CUSTOMER || isOwnerAuthenticated) {
+            if (isOwnerAuthenticated) {
                 StudioTopBar(
-                    currentRole = currentRole,
+                    currentRole = AppRole.OWNER,
                     studioName = profile?.studioName ?: "Studio Expo",
-                    onRoleSelected = { role ->
-                        if (role == AppRole.OWNER) {
-                            viewModel.switchToOwnerView()
-                        } else {
-                            viewModel.switchToCustomerView()
-                        }
-                    },
-                    onShareClick = if (currentRole == AppRole.OWNER) {
-                        { viewModel.openShareDialog() }
-                    } else null,
-                    onMessageTemplateClick = if (currentRole == AppRole.OWNER) {
-                        { viewModel.openMessageTemplateDialog() }
-                    } else null
+                    onShareClick = { viewModel.openShareDialog() },
+                    onMessageTemplateClick = { viewModel.openMessageTemplateDialog() }
                 )
             }
         },

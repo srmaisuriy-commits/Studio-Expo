@@ -78,14 +78,12 @@ fun OwnerAuthScreen(
     onEmailSignUp: (String, String) -> Unit = { _, _ -> },
     onGoogleLogin: (String) -> Unit = {},
     onDirectLogin: (String) -> Unit = {},
-    onSwitchToCustomer: () -> Unit,
+    onSwitchToCustomer: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
 
-    var authTab by remember { mutableStateOf(0) } // 0: PIN, 1: Email
-    var enteredPin by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var isPasswordVisible by remember { mutableStateOf(false) }
@@ -159,116 +157,13 @@ fun OwnerAuthScreen(
                         .padding(20.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    // Auth Mode Selector Tabs
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(12.dp))
-                            .padding(4.dp),
-                        horizontalArrangement = Arrangement.SpaceEvenly
-                    ) {
-                        Button(
-                            onClick = { authTab = 0 },
-                            shape = RoundedCornerShape(10.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = if (authTab == 0) StudioAmber else Color.Transparent,
-                                contentColor = if (authTab == 0) Color.Black else MaterialTheme.colorScheme.onSurfaceVariant
-                            ),
-                            elevation = null,
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text("🔑 Quick PIN", fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                        }
-                        Button(
-                            onClick = { authTab = 1 },
-                            shape = RoundedCornerShape(10.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = if (authTab == 1) StudioAmber else Color.Transparent,
-                                contentColor = if (authTab == 1) Color.Black else MaterialTheme.colorScheme.onSurfaceVariant
-                            ),
-                            elevation = null,
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text("✉️ Email / Pass", fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(18.dp))
-
-                    if (authTab == 0) {
-                        // Quick 4-Digit PIN Access
-                        Text(
-                            text = "Enter Studio PIN (Default: 1234)",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        OutlinedTextField(
-                            value = enteredPin,
-                            onValueChange = { if (it.length <= 6) enteredPin = it },
-                            label = { Text("4-Digit Owner PIN") },
-                            placeholder = { Text("1234") },
-                            leadingIcon = {
-                                Icon(
-                                    imageVector = Icons.Default.Key,
-                                    contentDescription = null,
-                                    tint = StudioAmber
-                                )
-                            },
-                            visualTransformation = PasswordVisualTransformation(),
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .testTag("owner_pin_input"),
-                            singleLine = true
-                        )
-
-                        if (pinError != null) {
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                text = pinError,
-                                fontSize = 12.sp,
-                                color = StatusBookedRed,
-                                fontWeight = FontWeight.Medium,
-                                textAlign = TextAlign.Center
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        Button(
-                            onClick = {
-                                if (enteredPin.isBlank()) {
-                                    Toast.makeText(context, "Please enter 4-digit PIN", Toast.LENGTH_SHORT).show()
-                                    return@Button
-                                }
-                                onPinEntered(enteredPin)
-                            },
-                            shape = RoundedCornerShape(12.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = StudioAmber),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(48.dp)
-                                .testTag("btn_pin_login")
-                        ) {
-                            Text(
-                                text = "Unlock Owner Dashboard",
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.Black
-                            )
-                        }
-                    } else {
-                        // Email / Password Form
-                        Text(
-                            text = if (isSignUpMode) "Studio Account Sign Up" else "Studio Owner Log In",
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
+                    // Email / Password Form
+                    Text(
+                        text = if (isSignUpMode) "Studio Account Sign Up" else "Studio Owner Log In",
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
 
                         Spacer(modifier = Modifier.height(14.dp))
 
@@ -383,7 +278,6 @@ fun OwnerAuthScreen(
                                 fontWeight = FontWeight.SemiBold
                             )
                         }
-                    }
 
                     Row(
                         modifier = Modifier
@@ -448,22 +342,6 @@ fun OwnerAuthScreen(
                         }
                     }
                 }
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            OutlinedButton(
-                onClick = onSwitchToCustomer,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag("auth_switch_to_customer_btn"),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Text(
-                    text = "🌐 View Public Customer Booking Portal",
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.SemiBold
-                )
             }
 
             Spacer(modifier = Modifier.height(24.dp))

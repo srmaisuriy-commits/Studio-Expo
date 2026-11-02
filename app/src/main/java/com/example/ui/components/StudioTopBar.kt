@@ -46,7 +46,7 @@ import com.example.ui.viewmodel.AppRole
 fun StudioTopBar(
     currentRole: AppRole,
     studioName: String,
-    onRoleSelected: (AppRole) -> Unit,
+    onRoleSelected: ((AppRole) -> Unit)? = null,
     onShareClick: (() -> Unit)? = null,
     onMessageTemplateClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier
@@ -133,92 +133,6 @@ fun StudioTopBar(
                         }
                     }
                 }
-            }
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            // Role switcher
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(MaterialTheme.colorScheme.surfaceVariant)
-                    .padding(4.dp),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                RoleToggleButton(
-                    title = "👤 Owner (मालिक)",
-                    subtitle = "Manage & Bookings",
-                    isSelected = currentRole == AppRole.OWNER,
-                    icon = Icons.Default.Lock,
-                    onClick = { onRoleSelected(AppRole.OWNER) },
-                    modifier = Modifier
-                        .weight(1f)
-                        .testTag("toggle_owner_mode_btn")
-                )
-
-                Spacer(modifier = Modifier.width(4.dp))
-
-                RoleToggleButton(
-                    title = "👥 Customer (ग्राहक)",
-                    subtitle = "Public Booking Flow",
-                    isSelected = currentRole == AppRole.CUSTOMER,
-                    icon = Icons.Default.Person,
-                    onClick = { onRoleSelected(AppRole.CUSTOMER) },
-                    modifier = Modifier
-                        .weight(1f)
-                        .testTag("toggle_customer_mode_btn")
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun RoleToggleButton(
-    title: String,
-    subtitle: String,
-    isSelected: Boolean,
-    icon: ImageVector,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val bgColor = if (isSelected) StudioAmber else Color.Transparent
-    val textColor = if (isSelected) Color.Black else MaterialTheme.colorScheme.onSurfaceVariant
-    val subtextColor = if (isSelected) Color(0xFF2E2400) else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-
-    Box(
-        modifier = modifier
-            .clip(RoundedCornerShape(8.dp))
-            .background(bgColor)
-            .clickable { onClick() }
-            .padding(vertical = 8.dp, horizontal = 10.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = textColor,
-                modifier = Modifier.size(16.dp)
-            )
-            Spacer(modifier = Modifier.width(6.dp))
-            Column {
-                Text(
-                    text = title,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = textColor
-                )
-                Text(
-                    text = subtitle,
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Normal,
-                    color = subtextColor
-                )
             }
         }
     }

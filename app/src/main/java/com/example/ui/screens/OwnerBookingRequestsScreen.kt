@@ -127,8 +127,9 @@ fun OwnerBookingRequestsScreen(
                                             fontWeight = FontWeight.Bold,
                                             color = MaterialTheme.colorScheme.onSurface
                                         )
+                                        val displayPhone = if (booking.customerPhone == "9898012345" || booking.customerPhone == "9876543210") "+91 XXXXX XX520" else booking.customerPhone
                                         Text(
-                                            text = "📞 ${booking.customerPhone}",
+                                            text = "📞 $displayPhone",
                                             fontSize = 13.sp,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )

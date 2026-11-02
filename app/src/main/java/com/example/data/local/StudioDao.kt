@@ -59,6 +59,9 @@ interface StudioDao {
     @Query("SELECT * FROM booking_requests WHERE id = :id LIMIT 1")
     suspend fun getBookingById(id: Long): BookingRequest?
 
+    @Query("SELECT * FROM booking_requests WHERE customerPhone = :phone AND dateStr = :dateStr LIMIT 1")
+    suspend fun getBookingByPhoneAndDate(phone: String, dateStr: String): BookingRequest?
+
     @Update
     suspend fun updateBooking(booking: BookingRequest)
 
@@ -67,4 +70,10 @@ interface StudioDao {
 
     @Query("DELETE FROM booking_requests WHERE dateStr = :dateStr")
     suspend fun deleteBookingByDate(dateStr: String)
+
+    @Query("SELECT * FROM studio_date_slots")
+    suspend fun getAllDateSlotsSync(): List<StudioDateSlot>
+
+    @Query("SELECT * FROM booking_requests")
+    suspend fun getAllBookingsSync(): List<BookingRequest>
 }

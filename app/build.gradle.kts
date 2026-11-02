@@ -70,10 +70,15 @@ secrets {
 
 googleServices { missingGoogleServicesStrategy = MissingGoogleServicesStrategy.WARN }
 
+configurations.all {
+    exclude(group = "androidx.privacysandbox.ads", module = "ads-adservices")
+    exclude(group = "androidx.privacysandbox.ads", module = "ads-adservices-java")
+}
+
 dependencies {
   implementation(platform(libs.androidx.compose.bom))
   implementation(platform(libs.firebase.bom))
-  implementation(libs.firebase.analytics)
+  // implementation(libs.firebase.analytics)
   implementation(libs.androidx.activity.compose)
   implementation(libs.androidx.compose.material.icons.core)
   implementation(libs.androidx.compose.material.icons.extended)
@@ -97,6 +102,7 @@ dependencies {
   implementation(libs.kotlinx.coroutines.core)
   implementation(libs.logging.interceptor)
   implementation(libs.okhttp)
+  implementation(libs.play.services.ads)
   testImplementation(libs.androidx.compose.ui.test.junit4)
   testImplementation(libs.androidx.core)
   testImplementation(libs.androidx.junit)

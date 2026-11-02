@@ -278,18 +278,18 @@ private fun CalendarDayCell(
     onClick: () -> Unit
 ) {
     val backgroundColor = when {
+        isBooked -> StatusBookedRed.copy(alpha = 0.28f)
+        isRequest -> StatusRequestYellow.copy(alpha = 0.30f)
         isSelected -> StudioAmber.copy(alpha = 0.35f)
-        isBooked -> StatusBookedRed.copy(alpha = 0.22f)
         isFree -> StatusFreeGreen.copy(alpha = 0.22f)
-        isRequest -> StatusRequestYellow.copy(alpha = 0.22f)
         else -> Color.Transparent
     }
 
     val borderColor = when {
+        isBooked -> StatusBookedRed.copy(alpha = 0.85f)
+        isRequest -> StatusRequestYellow.copy(alpha = 0.85f)
         isSelected -> StudioAmber
-        isBooked -> StatusBookedRed.copy(alpha = 0.7f)
         isFree -> StatusFreeGreen.copy(alpha = 0.7f)
-        isRequest -> StatusRequestYellow.copy(alpha = 0.7f)
         else -> Color.Transparent
     }
 
@@ -319,16 +319,32 @@ private fun CalendarDayCell(
                 fontSize = 13.sp,
                 fontWeight = if (isSelected || isFree || isBooked || isRequest) FontWeight.Bold else FontWeight.Normal,
                 color = when {
-                    isSelected -> StudioAmber
                     isBooked -> StatusBookedRed
-                    isFree -> StatusFreeGreen
                     isRequest -> StatusRequestYellow
+                    isSelected -> StudioAmber
+                    isFree -> StatusFreeGreen
                     else -> TextLightPrimary
                 }
             )
 
             // Status indicator dot or badge
             when {
+                isBooked -> {
+                    Box(
+                        modifier = Modifier
+                            .size(6.dp)
+                            .clip(CircleShape)
+                            .background(StatusBookedRed)
+                    )
+                }
+                isRequest -> {
+                    Box(
+                        modifier = Modifier
+                            .size(6.dp)
+                            .clip(CircleShape)
+                            .background(StatusRequestYellow)
+                    )
+                }
                 isSelected && isOwnerMode -> {
                     Icon(
                         imageVector = Icons.Default.Check,
@@ -337,32 +353,16 @@ private fun CalendarDayCell(
                         tint = StudioAmber
                     )
                 }
-                isBooked -> {
-                    Box(
-                        modifier = Modifier
-                            .size(5.dp)
-                            .clip(CircleShape)
-                            .background(StatusBookedRed)
-                    )
-                }
                 isFree -> {
                     Box(
                         modifier = Modifier
-                            .size(5.dp)
+                            .size(6.dp)
                             .clip(CircleShape)
                             .background(StatusFreeGreen)
                     )
                 }
-                isRequest -> {
-                    Box(
-                        modifier = Modifier
-                            .size(5.dp)
-                            .clip(CircleShape)
-                            .background(StatusRequestYellow)
-                    )
-                }
                 else -> {
-                    Spacer(modifier = Modifier.height(5.dp))
+                    Spacer(modifier = Modifier.height(6.dp))
                 }
             }
         }

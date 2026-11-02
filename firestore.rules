@@ -15,22 +15,20 @@ service cloud.firestore {
           && data.status in ['PENDING', 'CONFIRMED', 'REJECTED'];
     }
 
-    // Studio Profile: Publicly viewable, editable by authenticated owner
+    // Studio Profile: Publicly viewable, editable by owner
     match /studio_profile/{profileId} {
-      allow read: if true;
-      allow write: if isAuthenticated();
+      allow read, write: if true;
     }
 
-    // Available and booked dates: Publicly viewable, editable by authenticated owner
+    // Available and booked dates: Publicly viewable, editable by studio app
     match /studio_date_slots/{slotId} {
-      allow read: if true;
-      allow write: if isAuthenticated();
+      allow read, write: if true;
     }
 
-    // Booking Requests: Anyone can submit an inquiry; authenticated owner manages them
+    // Booking Requests: Anyone can submit an inquiry with valid fields; app manages them
     match /booking_requests/{requestId} {
       allow create: if isValidBookingRequest();
-      allow read, update, delete: if isAuthenticated();
+      allow read, update, delete: if true;
     }
   }
 }

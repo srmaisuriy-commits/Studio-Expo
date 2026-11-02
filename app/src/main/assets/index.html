@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="gu">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,7 +7,7 @@
   <meta name="description" content="Live availability calendar and photography crew booking for Studio Expo (Rajesh Maisuriya).">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Noto+Sans+Gujarati:wght@400;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Noto+Sans+Gujarati:wght@400;600;700;800&display=swap" rel="stylesheet">
   
   <style>
     :root {
@@ -27,7 +27,7 @@
       --text-secondary: #9AA0A6;
       --text-muted: #6B7280;
       --border-color: rgba(255, 255, 255, 0.08);
-      --font-main: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      --font-main: 'Plus Jakarta Sans', 'Noto Sans Gujarati', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     }
 
     * {
@@ -254,7 +254,7 @@
     }
     .dot-free { background: var(--green); box-shadow: 0 0 6px rgba(15, 157, 88, 0.6); }
     .dot-booked { background: var(--red); box-shadow: 0 0 6px rgba(217, 48, 37, 0.6); }
-    .dot-request { background: var(--yellow); }
+    .dot-request { background: var(--yellow); box-shadow: 0 0 6px rgba(242, 153, 0, 0.6); }
 
     /* Calendar Controls */
     .calendar-nav {
@@ -328,28 +328,50 @@
       margin-top: 3px;
     }
     .day-cell.status-free .day-indicator { background: var(--green); }
+    
+    /* Booked dates are strictly RED & read-only */
     .day-cell.status-booked {
-      border-color: rgba(217, 48, 37, 0.5);
-      background: rgba(217, 48, 37, 0.12);
+      border: 1.5px solid rgba(217, 48, 37, 0.75) !important;
+      background: rgba(217, 48, 37, 0.22) !important;
       cursor: not-allowed;
     }
     .day-cell.status-booked .day-number {
-      color: #F87171;
+      color: #FFA4A2 !important;
+      font-weight: 800;
     }
     .day-cell.status-booked .day-indicator {
-      background: var(--red);
+      background: var(--red) !important;
+      box-shadow: 0 0 6px var(--red);
     }
-    .day-cell.status-request .day-indicator { background: var(--yellow); }
+    .day-cell.status-booked::after {
+      content: "BOOKED";
+      font-size: 0.55rem;
+      color: #FFA4A2;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      transform: scale(0.9);
+      margin-top: 1px;
+    }
 
-    .day-cell.selected {
+    /* Requested dates are YELLOW */
+    .day-cell.status-request {
+      border: 1px solid rgba(242, 153, 0, 0.5);
+      background: rgba(242, 153, 0, 0.15);
+    }
+    .day-cell.status-request .day-indicator {
+      background: var(--yellow);
+    }
+
+    /* Selected dates by customer */
+    .day-cell.selected:not(.status-booked) {
       background: linear-gradient(135deg, var(--amber) 0%, var(--amber-dark) 100%) !important;
       border-color: var(--amber-light) !important;
       color: #000 !important;
       box-shadow: 0 4px 12px rgba(212, 158, 60, 0.4);
       transform: scale(1.04);
     }
-    .day-cell.selected .day-number,
-    .day-cell.selected .day-indicator {
+    .day-cell.selected:not(.status-booked) .day-number,
+    .day-cell.selected:not(.status-booked) .day-indicator {
       color: #000 !important;
       background: #000 !important;
     }
@@ -389,59 +411,197 @@
       font-weight: bold;
     }
 
-    /* Crew Roles Grid */
-    .crew-grid {
-      display: grid;
-      grid-template-columns: repeat(1, 1fr);
-      gap: 8px;
-      margin-top: 10px;
+    /* Date-Wise Crew Cards (User requested: separate card per date) */
+    .date-crew-container {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      margin-top: 12px;
     }
-    @media (min-width: 480px) {
-      .crew-grid {
-        grid-template-columns: repeat(2, 1fr);
-      }
-    }
-    .crew-card {
+    .date-card {
       background: var(--surface-dark);
-      border: 1px solid var(--border-color);
-      border-radius: 12px;
-      padding: 12px 14px;
-      cursor: pointer;
-      transition: all 0.15s ease;
+      border: 1.5px solid var(--border-color);
+      border-radius: 16px;
+      padding: 16px;
+      transition: all 0.2s ease;
+    }
+    .date-card:hover {
+      border-color: rgba(212, 158, 60, 0.35);
+    }
+    .date-card-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border-color);
+      margin-bottom: 12px;
+    }
+    .date-card-title-wrap {
+      display: flex;
+      align-items: center;
       gap: 10px;
     }
-    .crew-card:hover {
+    .day-badge {
+      background: var(--amber);
+      color: #000;
+      font-size: 0.72rem;
+      font-weight: 800;
+      padding: 3px 8px;
+      border-radius: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .date-card-date-label {
+      font-size: 0.96rem;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+    .date-card-subtotal-badge {
+      background: rgba(74, 222, 128, 0.15);
+      border: 1px solid rgba(74, 222, 128, 0.3);
+      color: #4ADE80;
+      font-weight: 800;
+      font-size: 0.9rem;
+      padding: 4px 10px;
+      border-radius: 8px;
+    }
+
+    .date-crew-options-grid {
+      display: grid;
+      grid-template-columns: repeat(1, 1fr);
+      gap: 8px;
+    }
+    @media (min-width: 480px) {
+      .date-crew-options-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    .date-crew-chip {
+      background: var(--surface-card);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 10px 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      transition: all 0.15s ease;
+      user-select: none;
+    }
+    .date-crew-chip:hover {
       border-color: rgba(212, 158, 60, 0.4);
     }
-    .crew-card.active {
+    .date-crew-chip.active {
       border-color: var(--amber);
-      background: rgba(212, 158, 60, 0.12);
+      background: rgba(212, 158, 60, 0.14);
       box-shadow: 0 0 0 1px var(--amber);
     }
-    .crew-info {
+    .date-crew-chip-info {
       display: flex;
       flex-direction: column;
       gap: 2px;
     }
-    .crew-title {
-      font-size: 0.88rem;
+    .date-crew-chip-name {
+      font-size: 0.82rem;
       font-weight: 700;
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 5px;
     }
-    .crew-sub {
-      font-size: 0.72rem;
+    .date-crew-chip-sub {
+      font-size: 0.7rem;
       color: var(--text-secondary);
     }
-    .crew-price {
-      font-size: 0.88rem;
+    .date-crew-chip-price {
+      font-size: 0.82rem;
       font-weight: 800;
       color: #4ADE80;
       white-space: nowrap;
+    }
+
+    .empty-date-notice {
+      text-align: center;
+      padding: 24px;
+      background: var(--surface-dark);
+      border: 1px dashed var(--border-color);
+      border-radius: 16px;
+      color: var(--text-secondary);
+      font-size: 0.88rem;
+    }
+
+    /* Single Total Package Card (User requested: package summary day ની જગ્યાએ total pakg) */
+    .total-package-card {
+      background: linear-gradient(135deg, rgba(212, 158, 60, 0.16) 0%, rgba(15, 157, 88, 0.16) 100%);
+      border: 1.5px solid rgba(212, 158, 60, 0.5);
+      border-radius: 18px;
+      padding: 20px;
+      margin-top: 20px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+    }
+    .total-package-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    .total-package-tag {
+      background: var(--amber);
+      color: #000;
+      font-size: 0.72rem;
+      font-weight: 800;
+      padding: 3px 10px;
+      border-radius: 6px;
+      letter-spacing: 0.05em;
+    }
+    .total-package-days {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--amber-light);
+    }
+
+    .total-package-breakdown {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      background: rgba(0, 0, 0, 0.3);
+      padding: 12px 14px;
+      border-radius: 12px;
+      margin-bottom: 14px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    .total-breakdown-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.82rem;
+      color: #D1D5DB;
+    }
+    .total-breakdown-row strong {
+      color: #FFF;
+    }
+
+    .total-package-grand-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-top: 8px;
+      border-top: 1px solid rgba(255, 255, 255, 0.12);
+    }
+    .total-grand-label {
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: var(--text-primary);
+    }
+    .total-grand-sub {
+      font-size: 0.72rem;
+      color: var(--text-secondary);
+    }
+    .total-grand-amount {
+      font-size: 1.6rem;
+      font-weight: 900;
+      color: #4ADE80;
+      text-shadow: 0 0 16px rgba(74, 222, 128, 0.4);
     }
 
     /* Form Fields */
@@ -469,30 +629,6 @@
     .input-field:focus {
       border-color: var(--amber);
       box-shadow: 0 0 0 2px rgba(212, 158, 60, 0.2);
-    }
-
-    /* Quote Box */
-    .quote-box {
-      background: linear-gradient(135deg, rgba(212, 158, 60, 0.15) 0%, rgba(15, 157, 88, 0.15) 100%);
-      border: 1px solid rgba(212, 158, 60, 0.4);
-      border-radius: 16px;
-      padding: 16px;
-      margin-top: 20px;
-    }
-    .quote-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-size: 0.88rem;
-      margin-bottom: 6px;
-    }
-    .quote-row.total {
-      font-size: 1.15rem;
-      font-weight: 800;
-      color: #4ADE80;
-      border-top: 1px solid rgba(255, 255, 255, 0.1);
-      padding-top: 8px;
-      margin-top: 8px;
     }
 
     .btn-submit {
@@ -546,31 +682,69 @@
     const fbApp = initializeApp(firebaseConfig);
     const db = getFirestore(fbApp, "ai-studio-android-studioex-fc0eee82-09e7-4b93-806d-fe80871695cf");
 
+    // Extract studioId from URL query parameter (e.g. ?studio=rajesh_maisuriya)
+    const urlParams = new URLSearchParams(window.location.search);
+    const studioId = urlParams.get('studio') || urlParams.get('owner') || 'rajesh_maisuriya';
+    window.__STUDIO_ID__ = studioId;
     window.__FIREBASE_DB__ = db;
+
+    // Save booking request directly to Firestore with studioId isolation
     window.__SAVE_BOOKING_REQ__ = async function(data) {
       try {
-        const docId = data.dateStr + "_" + data.customerPhone;
+        data.studioId = window.__STUDIO_ID__;
+        const cleanDateStr = (data.dateStr || "date").replace(/[^a-zA-Z0-9_-]/g, "_");
+        const docId = window.__STUDIO_ID__ + "_" + cleanDateStr + "_" + (data.customerPhone || "phone") + "_" + Date.now();
         await setDoc(doc(db, "booking_requests", docId), data);
       } catch (err) {
         console.error("Firestore booking submit error:", err);
       }
     };
 
-    // Live listener for real-time calendar updates from Android app
-    onSnapshot(collection(db, "studio_date_slots"), (snapshot) => {
-      snapshot.forEach((d) => {
-        const item = d.data();
-        const dateKey = item.dateStr || d.id;
-        window.LIVE_DATE_SLOTS[dateKey] = {
-          status: item.status,
-          note: item.note || "",
-          workType: item.workType || ""
-        };
+    // 1. Live listener for studio profile & custom crew rates
+    try {
+      onSnapshot(doc(db, "studio_profile", studioId), (docSnap) => {
+        if (docSnap.exists()) {
+          const profileData = docSnap.data();
+          window.CURRENT_STUDIO_PROFILE = profileData;
+          if (window.onStudioProfileLoaded) window.onStudioProfileLoaded(profileData);
+        } else {
+          onSnapshot(doc(db, "studio_profile", "default"), (defaultSnap) => {
+            if (defaultSnap.exists()) {
+              const profileData = defaultSnap.data();
+              window.CURRENT_STUDIO_PROFILE = profileData;
+              if (window.onStudioProfileLoaded) window.onStudioProfileLoaded(profileData);
+            }
+          });
+        }
       });
-      if (window.refreshCalendarUI) {
-        window.refreshCalendarUI();
-      }
-    });
+    } catch (e) {
+      console.warn("Profile listener error:", e);
+    }
+
+    // 2. Live listener for real-time calendar updates from Android app for this specific studio
+    try {
+      onSnapshot(collection(db, "studio_date_slots"), (snapshot) => {
+        snapshot.forEach((d) => {
+          const item = d.data();
+          const docStudio = item.studioId;
+          // Filter by studioId (or default if unassigned)
+          if (docStudio && docStudio !== window.__STUDIO_ID__ && !d.id.startsWith(window.__STUDIO_ID__ + "_")) {
+            return;
+          }
+          const dateKey = item.dateStr || d.id.replace(window.__STUDIO_ID__ + "_", "");
+          window.LIVE_DATE_SLOTS[dateKey] = {
+            status: item.status,
+            note: item.note || "",
+            workType: item.workType || ""
+          };
+        });
+        if (window.refreshCalendarUI) {
+          window.refreshCalendarUI();
+        }
+      });
+    } catch (e) {
+      console.warn("Date slots listener error:", e);
+    }
   </script>
 </head>
 <body>
@@ -587,7 +761,7 @@
       </a>
       <div class="sync-badge">
         <div class="sync-pulse"></div>
-        <span>Live Cloud Sync</span>
+        <span>Live Cloud Calendar</span>
       </div>
     </div>
   </header>
@@ -598,26 +772,26 @@
     <div class="hero-card">
       <div style="display: flex; align-items: center; gap: 8px;">
         <span class="lead-badge">Lead Artist</span>
-        <span class="photographer-name">Rajesh Maisuriya</span>
+        <span class="photographer-name" id="photographerNameText">Rajesh Maisuriya</span>
       </div>
-      <h2 class="studio-name">Studio Expo Photography</h2>
-      <div class="studio-location">
+      <h2 class="studio-name" id="studioNameText">Studio Expo Photography</h2>
+      <div class="studio-location" id="studioLocationText">
         📍 Ahmedabad, Gujarat • 4K Cinematic & Luxury Shoots
       </div>
 
-      <p class="bio-text">
+      <p class="bio-text" id="studioBioText">
         Book professional photography crew members, cinematic directors, and drone pilots for your events across Gujarat & India.
       </p>
 
-      <div class="gear-box">
-        🎥 <strong>Camera Gear:</strong> Sony FX3 / A7 IV • DJI Drone • Pro Gimbal • Cinematic 4K Video
+      <div class="gear-box" id="studioGearBox">
+        🎥 <strong>Camera Gear:</strong> <span id="gearDetailsText">Sony FX3 / A7 IV • DJI Drone • Pro Gimbal • Cinematic 4K Video</span>
       </div>
 
       <div class="quick-cta-row">
-        <a href="https://wa.me/919876543210?text=Hello%20Studio%20Expo!%20I%20want%20to%20inquire%20about%20booking%20crew%20for%20my%20event." class="btn btn-whatsapp" target="_blank" rel="noopener">
+        <a id="quickWhatsAppBtn" href="https://wa.me/919999999520?text=Hello%20Studio%20Expo!%20I%20want%20to%20inquire%20about%20booking%20crew%20for%20my%20event." class="btn btn-whatsapp" target="_blank" rel="noopener">
           💬 WhatsApp Chat
         </a>
-        <a href="tel:+919876543210" class="btn btn-call">
+        <a id="quickCallBtn" href="tel:+91XXXXXXX520" class="btn btn-call">
           📞 Call Direct
         </a>
       </div>
@@ -628,14 +802,15 @@
       <div class="section-header">
         <div>
           <div class="section-title">📅 Step 1: Select Event Date(s)</div>
-          <div class="section-subtitle">कैलेंडर में तारीख चुनें (Live availability synced with studio app)</div>
+          <div class="section-subtitle">કૅલેન્ડરમાં તારીખ પસંદ કરો (Multi-Date Selectable • Red dates are Booked & Read-Only)</div>
         </div>
       </div>
 
+      <!-- Live Legend -->
       <div class="legend-row">
-        <div class="legend-item"><div class="legend-dot dot-free"></div> Free / उपलब्ध</div>
-        <div class="legend-item"><div class="legend-dot dot-booked"></div> Booked / बुक</div>
-        <div class="legend-item"><div class="legend-dot dot-request"></div> Requested / लंबित</div>
+        <div class="legend-item"><div class="legend-dot dot-free"></div> ઉપલબ્ધ (Available)</div>
+        <div class="legend-item"><div class="legend-dot dot-booked"></div> બુક થયેલ (Booked - Read Only)</div>
+        <div class="legend-item"><div class="legend-dot dot-request"></div> રિક્વેસ્ટ (Requested)</div>
       </div>
 
       <div class="calendar-nav">
@@ -654,80 +829,81 @@
 
       <div class="selected-summary-box" id="selectedDatesSummary" style="display: none;">
         <div style="font-size: 0.82rem; font-weight: 700; color: var(--amber-light);">
-          Selected Dates (<span id="selectedCount">0</span> Days):
+          પસંદ કરેલ તારીખો (Selected Dates: <span id="selectedCount">0</span> Days):
         </div>
         <div class="chips-wrap" id="selectedChipsContainer"></div>
       </div>
     </div>
 
-    <!-- Step 2: Photography Crew Selection -->
+    <!-- Step 2: Date-Wise Crew Selection (Separate card per date as requested) -->
     <div class="section-card">
       <div class="section-header">
         <div>
-          <div class="section-title">👥 Step 2: Select Photography Crew / Services</div>
-          <div class="section-subtitle">आवश्यकतानुसार क्रू चुनें (Multiple allowed)</div>
+          <div class="section-title">👥 Step 2: Date-Wise Crew Selection</div>
+          <div class="section-subtitle">દરેક તારીખ માટે અલગ કાર્ડ • તારીખ મુજબ ક્રૂ અને પેકેજ રેટ સેટ કરો</div>
         </div>
       </div>
 
-      <div class="crew-grid" id="crewGrid">
+      <!-- Container where separate cards are rendered for each selected date -->
+      <div class="date-crew-container" id="dateWiseCrewContainer">
         <!-- Rendered by JS -->
       </div>
 
-      <!-- Price Set Option -->
-      <div class="form-group" style="margin-top: 16px;">
+      <!-- Custom Total Override Option -->
+      <div class="form-group" style="margin-top: 18px;">
         <label class="form-label" for="customPriceInput">
-          Set Custom Price (₹) / कस्टम पैकेज रेट (Optional - Default auto calculated)
+          Set Custom Grand Total (₹) / વૈકલ્પિક કસ્ટમ રેટ (Optional - Default auto calculated)
         </label>
-        <input type="number" id="customPriceInput" class="input-field" placeholder="Enter custom package rate or leave empty for auto">
+        <input type="number" id="customPriceInput" class="input-field" placeholder="Leave empty for automatic calculation">
       </div>
     </div>
 
-    <!-- Step 3: Customer Details -->
+    <!-- Step 3: Customer Details & Total Package Card -->
     <div class="section-card">
       <div class="section-header">
         <div>
-          <div class="section-title">👤 Step 3: Customer Details</div>
-          <div class="section-subtitle">अपना विवरण दर्ज करें / Enter your contact details</div>
+          <div class="section-title">👤 Step 3: Customer Details & Booking</div>
+          <div class="section-subtitle">તમારી વિગતો દાખલ કરો અને WhatsApp પર મોકલો</div>
         </div>
       </div>
 
       <div class="form-group">
-        <label class="form-label" for="custName">Full Name / पूरा नाम *</label>
-        <input type="text" id="custName" class="input-field" placeholder="e.g. Amit Patel" required>
+        <label class="form-label" for="custName">Full Name / ગ્રાહકનું પૂરું નામ *</label>
+        <input type="text" id="custName" class="input-field" placeholder="દા.ત. Amit Patel" required>
       </div>
 
       <div class="form-group">
-        <label class="form-label" for="custPhone">WhatsApp / Mobile Number / मोबाइल नंबर *</label>
-        <input type="tel" id="custPhone" class="input-field" placeholder="e.g. 9898012345" required>
+        <label class="form-label" for="custPhone">WhatsApp / Mobile Number / મોબાઈલ નંબર *</label>
+        <input type="tel" id="custPhone" class="input-field" placeholder="+91 XXXXX XX520" required>
       </div>
 
       <div class="form-group">
-        <label class="form-label" for="custLocation">Venue / Event Location / स्थान (City, Resort, Hall)</label>
-        <input type="text" id="custLocation" class="input-field" placeholder="e.g. Karnavati Club, Ahmedabad">
+        <label class="form-label" for="custLocation">Venue / Event Location / સ્થળ (City, Resort, Hall)</label>
+        <input type="text" id="custLocation" class="input-field" placeholder="દા.ત. Karnavati Club, Ahmedabad">
       </div>
 
       <div class="form-group">
-        <label class="form-label" for="custNotes">Special Requests / विशेष आवश्यकता</label>
-        <input type="text" id="custNotes" class="input-field" placeholder="e.g. 4K Drone shoot + candid album">
+        <label class="form-label" for="custNotes">Special Requests / ખાસ નોંધ</label>
+        <input type="text" id="custNotes" class="input-field" placeholder="દા.ત. 4K Drone shoot + candid album">
       </div>
 
-      <!-- Quote Summary -->
-      <div class="quote-box">
-        <div class="quote-row">
-          <span style="color: var(--text-secondary);">Selected Crew:</span>
-          <span id="summaryCrewNames" style="font-weight: 600; text-align: right; max-width: 60%;">Traditional Photographer</span>
+      <!-- Single Prominent Total Package Card (Replacing package summary day card) -->
+      <div class="total-package-card" id="totalPackageCard">
+        <div class="total-package-header">
+          <span class="total-package-tag">🏆 TOTAL PACKAGE</span>
+          <span class="total-package-days" id="totalDaysLabel">1 Day Selected</span>
         </div>
-        <div class="quote-row">
-          <span style="color: var(--text-secondary);">Per Day Rate:</span>
-          <span id="summaryPerDayRate" style="font-weight: 600;">₹10,000</span>
+
+        <div class="total-package-breakdown" id="totalPackageBreakdown">
+          <!-- Rendered by JS: Day-wise breakdown rows -->
         </div>
-        <div class="quote-row">
-          <span style="color: var(--text-secondary);">Days Count:</span>
-          <span id="summaryDaysCount" style="font-weight: 600;">1 Day</span>
-        </div>
-        <div class="quote-row total">
-          <span>Estimated Total:</span>
-          <span id="summaryTotalPrice">₹10,000</span>
+
+        <div class="total-package-grand-row">
+          <div>
+            <div class="total-grand-label">Grand Total Package</div>
+            <div class="total-grand-sub">તમામ દિવસો અને ક્રૂ નો ફાઇનલ અંદાજિત સરવાળો</div>
+          </div>
+          <div class="total-grand-amount" id="totalGrandAmountText">₹10,000</div>
         </div>
       </div>
 
@@ -742,9 +918,9 @@
   <div class="modal-overlay" id="successModal">
     <div class="modal-card">
       <div style="font-size: 48px; margin-bottom: 8px;">🎉</div>
-      <h3 style="font-size: 1.3rem; font-weight: 800; margin-bottom: 6px;">Booking Inquiry Sent!</h3>
+      <h3 style="font-size: 1.3rem; font-weight: 800; margin-bottom: 6px;">Booking Request Sent!</h3>
       <p style="color: var(--text-secondary); font-size: 0.88rem; margin-bottom: 16px;">
-        Your inquiry has been synced with Studio Expo's cloud calendar and WhatsApp is ready to send the details to Rajesh Maisuriya.
+        તમારી તારીખની રિક્વેસ્ટ સ્ટુડિયો એક્સપોના કેલેન્ડરમાં મોકલાઈ ગઈ છે. રાજેશ મૈસૂરિયાને WhatsApp પર મોકલવા માટે નીચે ક્લિક કરો.
       </p>
       <button class="btn btn-whatsapp" id="proceedWhatsAppBtn" style="width: 100%;">
         Open WhatsApp Now
@@ -758,13 +934,13 @@
   <script>
     // 7 Photographer Crew Roles as requested
     const CREW_ROLES = [
-      { id: "traditional_photo", title: "Traditional Photographer", hindi: "ट्रेडिशनल फोटोग्राफर", emoji: "📸", price: 10000 },
-      { id: "traditional_video", title: "Traditional Videographer", hindi: "ट्रेडिशनल वीडियोग्राफर", emoji: "📹", price: 12000 },
-      { id: "candid_photo", title: "Candid Photographer", hindi: "कैंडिड फोटोग्राफर", emoji: "📷", price: 18000 },
-      { id: "semi_candid_photo", title: "Semi-Candid Photographer", hindi: "सेमी-कैंडिड फोटोग्राफर", emoji: "🎞️", price: 14000 },
-      { id: "cinematographer", title: "Cinematographer", hindi: "सिनेमैटोग्राफर", emoji: "🎬", price: 25000 },
-      { id: "drone_pilot", title: "Drone Pilot", hindi: "ड्रोन पायलट", emoji: "🛸", price: 12000 },
-      { id: "supporting_crew", title: "Supporting Crew", hindi: "सपोर्टिंग क्रू / असिस्टेंट", emoji: "👥", price: 5000 }
+      { id: "traditional_photo", title: "Traditional Photographer", gujarati: "ટ્રેડિશનલ ફોટોગ્રાફર", emoji: "📸", price: 10000 },
+      { id: "traditional_video", title: "Traditional Videographer", gujarati: "ટ્રેડિશનલ વિડિયોગ્રાફર", emoji: "📹", price: 12000 },
+      { id: "candid_photo", title: "Candid Photographer", gujarati: "કેન્ડિડ ફોટોગ્રાફર", emoji: "📷", price: 18000 },
+      { id: "semi_candid_photo", title: "Semi-Candid Photographer", gujarati: "સેમી-કેન્ડિડ ફોટોગ્રાફર", emoji: "🎞️", price: 14000 },
+      { id: "cinematographer", title: "Cinematographer", gujarati: "સિનેમેટોગ્રાફર", emoji: "🎬", price: 25000 },
+      { id: "drone_pilot", title: "Drone Pilot", gujarati: "ડ્રોન પાયલટ", emoji: "🛸", price: 12000 },
+      { id: "supporting_crew", title: "Supporting Crew", gujarati: "સપોર્ટિંગ ક્રૂ / આસિસ્ટન્ટ", emoji: "👥", price: 5000 }
     ];
 
     // Live Date Slots synced with Firestore
@@ -777,7 +953,10 @@
     let currentYear = 2026;
     let currentMonth = 9; // October (0-indexed)
     let selectedDates = new Set();
-    let selectedCrewIds = new Set(["traditional_photo"]);
+    
+    // Date-wise crew mapping: isoDate -> Set of roleIds
+    window.DATE_CREW_MAP = {};
+
     let generatedWhatsAppUrl = "";
 
     const monthYearLabel = document.getElementById('monthYearLabel');
@@ -787,12 +966,11 @@
     const selectedDatesSummary = document.getElementById('selectedDatesSummary');
     const selectedCount = document.getElementById('selectedCount');
     const selectedChipsContainer = document.getElementById('selectedChipsContainer');
-    const crewGrid = document.getElementById('crewGrid');
+    const dateWiseCrewContainer = document.getElementById('dateWiseCrewContainer');
     const customPriceInput = document.getElementById('customPriceInput');
-    const summaryCrewNames = document.getElementById('summaryCrewNames');
-    const summaryPerDayRate = document.getElementById('summaryPerDayRate');
-    const summaryDaysCount = document.getElementById('summaryDaysCount');
-    const summaryTotalPrice = document.getElementById('summaryTotalPrice');
+    const totalDaysLabel = document.getElementById('totalDaysLabel');
+    const totalPackageBreakdown = document.getElementById('totalPackageBreakdown');
+    const totalGrandAmountText = document.getElementById('totalGrandAmountText');
     const sendBookingBtn = document.getElementById('sendBookingBtn');
     const successModal = document.getElementById('successModal');
     const proceedWhatsAppBtn = document.getElementById('proceedWhatsAppBtn');
@@ -804,11 +982,15 @@
     ];
 
     function init() {
-      selectedDates.add("2026-10-28");
-      renderCrewGrid();
+      // Default to 1 selected date for demonstration
+      const initialDate = "2026-10-28";
+      selectedDates.add(initialDate);
+      window.DATE_CREW_MAP[initialDate] = new Set(["traditional_photo"]);
+
       renderCalendar();
       updateSelectedSummary();
-      updateQuote();
+      renderDateWiseCrewCards();
+      updateTotalPackage();
 
       prevMonthBtn.addEventListener('click', () => {
         currentMonth--;
@@ -822,7 +1004,7 @@
         renderCalendar();
       });
 
-      customPriceInput.addEventListener('input', updateQuote);
+      customPriceInput.addEventListener('input', updateTotalPackage);
       sendBookingBtn.addEventListener('click', handleSendBooking);
 
       proceedWhatsAppBtn.addEventListener('click', () => {
@@ -833,37 +1015,60 @@
 
       window.refreshCalendarUI = () => {
         renderCalendar();
-        updateQuote();
+        updateTotalPackage();
       };
-    }
 
-    function renderCrewGrid() {
-      crewGrid.innerHTML = '';
-      CREW_ROLES.forEach(role => {
-        const isSelected = selectedCrewIds.has(role.id);
-        const card = document.createElement('div');
-        card.className = `crew-card ${isSelected ? 'active' : ''}`;
-        card.innerHTML = `
-          <div class="crew-info">
-            <div class="crew-title">
-              <span>${role.emoji}</span>
-              <span>${role.title}</span>
-            </div>
-            <div class="crew-sub">${role.hindi || role.title}</div>
-          </div>
-          <div class="crew-price">₹${role.price.toLocaleString('en-IN')}</div>
-        `;
-        card.addEventListener('click', () => {
-          if (selectedCrewIds.has(role.id)) {
-            if (selectedCrewIds.size > 1) selectedCrewIds.delete(role.id);
-          } else {
-            selectedCrewIds.add(role.id);
-          }
-          renderCrewGrid();
-          updateQuote();
-        });
-        crewGrid.appendChild(card);
-      });
+      window.onStudioProfileLoaded = (p) => {
+        if (!p) return;
+        if (p.photographerName) {
+          const el = document.getElementById('photographerNameText');
+          if (el) el.textContent = p.photographerName;
+        }
+        if (p.studioName) {
+          const el = document.getElementById('studioNameText');
+          if (el) el.textContent = p.studioName;
+        }
+        if (p.city) {
+          const el = document.getElementById('studioLocationText');
+          if (el) el.textContent = `📍 ${p.city} • 4K Cinematic & Luxury Shoots`;
+        }
+        if (p.bio) {
+          const el = document.getElementById('studioBioText');
+          if (el) el.textContent = p.bio;
+        }
+        if (p.cameraGearDetails) {
+          const el = document.getElementById('gearDetailsText');
+          if (el) el.textContent = p.cameraGearDetails;
+        }
+        const ph = p.whatsapp || p.phone || "+91 XXXXX XX520";
+        const cleanPh = ph.replace(/[^0-9]/g, '');
+        const waPh = cleanPh.length >= 10 ? (cleanPh.startsWith("91") ? cleanPh : `91${cleanPh}`) : "919999999520";
+        const waBtn = document.getElementById('quickWhatsAppBtn');
+        if (waBtn) {
+          waBtn.href = `https://wa.me/${waPh}?text=Hello%20${encodeURIComponent(p.studioName || "Studio Expo")}!%20I%20want%20to%20inquire%20about%20booking%20crew%20for%20my%20event.`;
+        }
+        const callBtn = document.getElementById('quickCallBtn');
+        if (callBtn) callBtn.href = `tel:+${waPh}`;
+
+        const updatePrice = (id, newPrice) => {
+          const role = CREW_ROLES.find(r => r.id === id);
+          if (role && newPrice && !isNaN(newPrice)) role.price = parseFloat(newPrice);
+        };
+        if (p.rateTraditionalPhoto) updatePrice('traditional_photo', p.rateTraditionalPhoto);
+        if (p.rateTraditionalVideo) updatePrice('traditional_video', p.rateTraditionalVideo);
+        if (p.rateCandidPhoto) updatePrice('candid_photo', p.rateCandidPhoto);
+        if (p.rateSemiCandidPhoto) updatePrice('semi_candid_photo', p.rateSemiCandidPhoto);
+        if (p.rateCinematographer) updatePrice('cinematographer', p.rateCinematographer);
+        if (p.rateDronePilot) updatePrice('drone_pilot', p.rateDronePilot);
+        if (p.rateSupportingCrew) updatePrice('supporting_crew', p.rateSupportingCrew);
+
+        renderDateWiseCrewCards();
+        updateTotalPackage();
+      };
+
+      if (window.CURRENT_STUDIO_PROFILE) {
+        window.onStudioProfileLoaded(window.CURRENT_STUDIO_PROFILE);
+      }
     }
 
     function renderCalendar() {
@@ -890,10 +1095,12 @@
 
         let statusClass = "status-free";
         if (status === "BOOKED") statusClass = "status-booked";
-        if (status === "REQUEST") statusClass = "status-request";
+        if (status === "REQUEST" || status === "PENDING") statusClass = "status-request";
 
         dayCell.className = `day-cell ${statusClass}`;
-        if (selectedDates.has(isoDate)) dayCell.classList.add('selected');
+        if (selectedDates.has(isoDate) && status !== "BOOKED") {
+          dayCell.classList.add('selected');
+        }
 
         dayCell.innerHTML = `
           <div class="day-number">${day}</div>
@@ -901,19 +1108,25 @@
         `;
 
         dayCell.addEventListener('click', () => {
+          // Live check: BOOKED dates are strictly read-only
           if (status === "BOOKED") {
-            alert(`Date ${isoDate} is already booked in the studio calendar! Please choose an available date.`);
+            alert(`🔒 તારીખ ${isoDate} સ્ટુડિયો એક્સપો (રાજેશ મૈસૂરિયા) દ્વારા પહેલેથી બુક થયેલ છે (BOOKED).\nઆ તારીખે કોઈ નવું બુકિંગ કે ફેરફાર થઈ શકશે નહીં.`);
             return;
           }
 
           if (selectedDates.has(isoDate)) {
             selectedDates.delete(isoDate);
+            delete window.DATE_CREW_MAP[isoDate];
           } else {
             selectedDates.add(isoDate);
+            if (!window.DATE_CREW_MAP[isoDate]) {
+              window.DATE_CREW_MAP[isoDate] = new Set(["traditional_photo"]);
+            }
           }
           renderCalendar();
           updateSelectedSummary();
-          updateQuote();
+          renderDateWiseCrewCards();
+          updateTotalPackage();
         });
 
         calendarDaysGrid.appendChild(dayCell);
@@ -940,9 +1153,11 @@
         chip.querySelector('button').addEventListener('click', (e) => {
           e.stopPropagation();
           selectedDates.delete(d);
+          delete window.DATE_CREW_MAP[d];
           renderCalendar();
           updateSelectedSummary();
-          updateQuote();
+          renderDateWiseCrewCards();
+          updateTotalPackage();
         });
         selectedChipsContainer.appendChild(chip);
       });
@@ -959,22 +1174,132 @@
       return iso;
     }
 
-    function updateQuote() {
-      const selectedCrewObjects = CREW_ROLES.filter(r => selectedCrewIds.has(r.id));
-      const crewNames = selectedCrewObjects.map(r => `${r.emoji} ${r.title}`).join(" + ");
-      summaryCrewNames.textContent = crewNames || "None";
+    // Render separate cards for each selected date (User request: harek date na alag card banavo)
+    function renderDateWiseCrewCards() {
+      dateWiseCrewContainer.innerHTML = '';
 
-      const perDayTotal = selectedCrewObjects.reduce((acc, r) => acc + r.price, 0);
-      summaryPerDayRate.textContent = `₹${perDayTotal.toLocaleString('en-IN')}`;
+      if (selectedDates.size === 0) {
+        dateWiseCrewContainer.innerHTML = `
+          <div class="empty-date-notice">
+            📅 કૃપા કરીને ઉપરના કેલેન્ડરમાંથી ૧ કે તેથી વધુ તારીખો પસંદ કરો.<br>
+            પછી દરેક તારીખ માટે અલગ ક્રૂ સિલેક્શન કાર્ડ ખુલશે.
+          </div>
+        `;
+        return;
+      }
 
-      const daysCount = selectedDates.size;
-      summaryDaysCount.textContent = daysCount > 0 ? `${daysCount} Day${daysCount > 1 ? 's' : ''}` : 'No date selected';
+      const sorted = Array.from(selectedDates).sort();
+      sorted.forEach((isoDate, index) => {
+        if (!window.DATE_CREW_MAP[isoDate]) {
+          window.DATE_CREW_MAP[isoDate] = new Set(["traditional_photo"]);
+        }
+        const currentCrewSet = window.DATE_CREW_MAP[isoDate];
 
-      const autoTotal = daysCount * perDayTotal;
+        // Compute subtotal for this date
+        const daySubtotal = CREW_ROLES
+          .filter(r => currentCrewSet.has(r.id))
+          .reduce((sum, r) => sum + r.price, 0);
+
+        const card = document.createElement('div');
+        card.className = 'date-card';
+
+        let chipsHtml = '';
+        CREW_ROLES.forEach(role => {
+          const isActive = currentCrewSet.has(role.id);
+          chipsHtml += `
+            <div class="date-crew-chip ${isActive ? 'active' : ''}" data-date="${isoDate}" data-role="${role.id}">
+              <div class="date-crew-chip-info">
+                <div class="date-crew-chip-name">
+                  <span>${role.emoji}</span>
+                  <span>${role.title}</span>
+                </div>
+                <div class="date-crew-chip-sub">${role.gujarati || role.title}</div>
+              </div>
+              <div class="date-crew-chip-price">₹${role.price.toLocaleString('en-IN')}</div>
+            </div>
+          `;
+        });
+
+        card.innerHTML = `
+          <div class="date-card-header">
+            <div class="date-card-title-wrap">
+              <span class="day-badge">Day ${index + 1}</span>
+              <span class="date-card-date-label">${formatDisplayDate(isoDate)} (${isoDate})</span>
+            </div>
+            <div class="date-card-subtotal-badge" id="subtotal_${isoDate}">₹${daySubtotal.toLocaleString('en-IN')}</div>
+          </div>
+          <div class="date-crew-options-grid">
+            ${chipsHtml}
+          </div>
+        `;
+
+        // Attach event listeners for chips in this card
+        card.querySelectorAll('.date-crew-chip').forEach(chip => {
+          chip.addEventListener('click', () => {
+            const d = chip.getAttribute('data-date');
+            const rId = chip.getAttribute('data-role');
+            const crewSet = window.DATE_CREW_MAP[d];
+
+            if (crewSet.has(rId)) {
+              if (crewSet.size > 1) {
+                crewSet.delete(rId);
+              } else {
+                alert('ઓછામાં ઓછો ૧ ક્રૂ મેમ્બર આ તારીખ માટે પસંદ હોવો જોઈએ.');
+                return;
+              }
+            } else {
+              crewSet.add(rId);
+            }
+
+            renderDateWiseCrewCards();
+            updateTotalPackage();
+          });
+        });
+
+        dateWiseCrewContainer.appendChild(card);
+      });
+    }
+
+    // Compute single Grand Total Package card
+    function updateTotalPackage() {
+      const sorted = Array.from(selectedDates).sort();
+      const count = sorted.length;
+
+      totalDaysLabel.textContent = count > 0 ? `${count} Day${count > 1 ? 's' : ''} Selected` : 'No date selected';
+      totalPackageBreakdown.innerHTML = '';
+
+      let calculatedGrandTotal = 0;
+
+      if (count === 0) {
+        totalPackageBreakdown.innerHTML = `
+          <div class="total-breakdown-row" style="color: var(--text-secondary); text-align: center;">
+            કોઈ તારીખ પસંદ કરેલ નથી
+          </div>
+        `;
+        totalGrandAmountText.textContent = "₹0";
+        return;
+      }
+
+      sorted.forEach((isoDate, idx) => {
+        const crewSet = window.DATE_CREW_MAP[isoDate] || new Set();
+        const selectedCrew = CREW_ROLES.filter(r => crewSet.has(r.id));
+        const daySubtotal = selectedCrew.reduce((s, r) => s + r.price, 0);
+        calculatedGrandTotal += daySubtotal;
+
+        const crewNames = selectedCrew.map(r => r.title).join(", ");
+        const row = document.createElement('div');
+        row.className = 'total-breakdown-row';
+        row.innerHTML = `
+          <span><strong>Day ${idx + 1} (${formatDisplayDate(isoDate)}):</strong> ${crewNames}</span>
+          <strong style="color: #4ADE80; margin-left: 8px;">₹${daySubtotal.toLocaleString('en-IN')}</strong>
+        `;
+        totalPackageBreakdown.appendChild(row);
+      });
+
       const userCustom = parseFloat(customPriceInput.value);
-      const finalPrice = (!isNaN(userCustom) && userCustom > 0) ? userCustom : autoTotal;
+      const finalAmount = (!isNaN(userCustom) && userCustom > 0) ? userCustom : calculatedGrandTotal;
 
-      summaryTotalPrice.textContent = `₹${finalPrice.toLocaleString('en-IN')}`;
+      totalGrandAmountText.textContent = `₹${finalAmount.toLocaleString('en-IN')}`;
     }
 
     async function handleSendBooking() {
@@ -984,38 +1309,52 @@
       const notes = document.getElementById('custNotes').value.trim();
 
       if (!name) {
-        alert('Please enter your Full Name / कृपया अपना पूरा नाम दर्ज करें।');
+        alert('કૃપા કરીને તમારું પૂરું નામ દાખલ કરો / Please enter Full Name');
         document.getElementById('custName').focus();
         return;
       }
       if (!phone || phone.length < 10) {
-        alert('Please enter a valid 10-digit mobile number / कृपया 10 अंकों का मोबाइल नंबर दर्ज करें।');
+        alert('કૃપા કરીને ૧૦ અંકનો સાચો મોબાઈલ નંબર દાખલ કરો / Please enter valid Mobile Number');
         document.getElementById('custPhone').focus();
         return;
       }
       if (selectedDates.size === 0) {
-        alert('Please select at least one event date on the calendar / कृपया कैलेंडर पर कम से कम एक तारीख चुनें।');
+        alert('કૃપા કરીને કેલેન્ડરમાંથી ઓછામાં ઓછી ૧ તારીખ પસંદ કરો / Please select event date(s)');
         return;
       }
 
-      const selectedCrewObjects = CREW_ROLES.filter(r => selectedCrewIds.has(r.id));
-      const crewSummary = selectedCrewObjects.map(r => `${r.emoji} ${r.title}`).join(" + ");
-      const daysCount = selectedDates.size;
-      const autoTotal = daysCount * selectedCrewObjects.reduce((acc, r) => acc + r.price, 0);
-      const userCustom = parseFloat(customPriceInput.value);
-      const finalAmount = (!isNaN(userCustom) && userCustom > 0) ? userCustom : autoTotal;
-
       const sortedDates = Array.from(selectedDates).sort();
-      const datesListStr = sortedDates.map(d => `• ${formatDisplayDate(d)} (${d})`).join('\n');
+      let dayByDayBreakdown = [];
+      let totalAutoAmount = 0;
 
-      // Sync booking request to Firestore
+      sortedDates.forEach((isoDate, idx) => {
+        const crewSet = window.DATE_CREW_MAP[isoDate] || new Set();
+        const selectedCrew = CREW_ROLES.filter(r => crewSet.has(r.id));
+        const daySubtotal = selectedCrew.reduce((s, r) => s + r.price, 0);
+        totalAutoAmount += daySubtotal;
+        const crewNames = selectedCrew.map(r => `${r.emoji} ${r.title}`).join(", ");
+        dayByDayBreakdown.push({
+          day: idx + 1,
+          date: isoDate,
+          displayDate: formatDisplayDate(isoDate),
+          crew: crewNames,
+          subtotal: daySubtotal
+        });
+      });
+
+      const userCustom = parseFloat(customPriceInput.value);
+      const finalGrandAmount = (!isNaN(userCustom) && userCustom > 0) ? userCustom : totalAutoAmount;
+
+      // Firestore submission: Creates request with status "PENDING"
       if (window.__SAVE_BOOKING_REQ__) {
         await window.__SAVE_BOOKING_REQ__({
           customerName: name,
           customerPhone: phone,
           dateStr: sortedDates.join(", "),
-          workType: crewSummary,
-          amount: finalAmount,
+          breakdown: dayByDayBreakdown,
+          daysCount: sortedDates.length,
+          workType: dayByDayBreakdown.map(d => `Day ${d.day}: ${d.crew}`).join(" | "),
+          amount: finalGrandAmount,
           location: location,
           notes: notes,
           status: "PENDING",
@@ -1023,23 +1362,32 @@
         });
       }
 
+      // Format WhatsApp message with Day-by-Day Card details and Grand Total
+      let waDaysText = dayByDayBreakdown.map(d => 
+        `🗓️ *Day ${d.day} • ${d.displayDate}*\n   👥 Team: ${d.crew}\n   💵 Subtotal: ₹${d.subtotal.toLocaleString('en-IN')}`
+      ).join('\n\n');
+
       const messageText = 
 `📸 *STUDIO EXPO - NEW CREW BOOKING INQUIRY*
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
 👤 *Customer Name:* ${name}
 📞 *Contact Phone:* ${phone}
-👥 *Selected Crew / Team:*
-${crewSummary}
-📅 *Event Date(s) (${daysCount} Day${daysCount > 1 ? 's' : ''}):*
-${datesListStr}
 📍 *Venue / City:* ${location || "To be discussed"}
-💰 *Total Estimated Package:* ₹${finalAmount.toLocaleString('en-IN')}
+
+📅 *DATE-WISE CREW SELECTION (${sortedDates.length} Days):*
+${waDaysText}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+💰 *TOTAL PACKAGE PRICE:* ₹${finalGrandAmount.toLocaleString('en-IN')}
 📝 *Notes:* ${notes || "Standard Coverage"}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
 _Sent via Studio Expo Live Booking Portal_`;
 
+      const rawPh = (window.CURRENT_STUDIO_PROFILE && (window.CURRENT_STUDIO_PROFILE.whatsapp || window.CURRENT_STUDIO_PROFILE.phone)) || "+91 XXXXX XX520";
+      const cleanOwnerPh = rawPh.replace(/[^0-9]/g, '');
+      const targetPhone = cleanOwnerPh.length >= 10 ? (cleanOwnerPh.startsWith("91") ? cleanOwnerPh : `91${cleanOwnerPh}`) : "919999999520";
       const encodedMsg = encodeURIComponent(messageText);
-      generatedWhatsAppUrl = `https://api.whatsapp.com/send?phone=919876543210&text=${encodedMsg}`;
+      generatedWhatsAppUrl = `https://api.whatsapp.com/send?phone=${targetPhone}&text=${encodedMsg}`;
 
       successModal.classList.add('active');
     }

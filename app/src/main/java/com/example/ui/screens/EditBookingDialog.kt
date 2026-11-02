@@ -18,7 +18,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import android.app.DatePickerDialog
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Person
@@ -45,7 +47,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import java.util.Calendar
+import java.util.Locale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -80,10 +85,14 @@ fun EditBookingDialog(
     ) -> Unit,
     onCancelBooking: (List<String>) -> Unit
 ) {
+    val context = LocalContext.current
     val catalogTypes = remember(profile) { WorkTypeCatalog.getTypesForProfile(profile) }
 
     var customerName by remember { mutableStateOf(group.customerName) }
-    var customerPhone by remember { mutableStateOf(group.customerPhone) }
+    var customerPhone by remember {
+        val initialPhone = if (group.customerPhone == "9898012345" || group.customerPhone == "9876543210") "+91 XXXXX XX520" else group.customerPhone
+        mutableStateOf(initialPhone)
+    }
     var activeDates by remember { mutableStateOf(group.dates) }
 
     // Date-crew map: initialize from existing
@@ -123,6 +132,29 @@ fun EditBookingDialog(
         }
         customAmount = calculatedSum
         amountText = calculatedSum.toLong().toString()
+    }
+
+    fun showDatePicker() {
+        val calendar = Calendar.getInstance()
+        DatePickerDialog(
+            context,
+            { _, year, month, dayOfMonth ->
+                val newIsoDate = String.format(Locale.US, "%04d-%02d-%02d", year, month + 1, dayOfMonth)
+                if (!activeDates.contains(newIsoDate)) {
+                    val updatedDates = (activeDates + newIsoDate).sorted()
+                    activeDates = updatedDates
+                    val updatedMap = dateSpecificCrewMap.toMutableMap()
+                    if (!updatedMap.containsKey(newIsoDate)) {
+                        updatedMap[newIsoDate] = selectedGlobalCrew
+                    }
+                    dateSpecificCrewMap = updatedMap
+                    recalculateAmount(updatedDates, differentCrewPerDate, updatedMap, selectedGlobalCrew)
+                }
+            },
+            calendar.get(Calendar.YEAR),
+            calendar.get(Calendar.MONTH),
+            calendar.get(Calendar.DAY_OF_MONTH)
+        ).show()
     }
 
     Dialog(onDismissRequest = onDismiss) {
@@ -184,7 +216,8 @@ fun EditBookingDialog(
                 OutlinedTextField(
                     value = customerPhone,
                     onValueChange = { customerPhone = it },
-                    label = { Text("Customer Mobile / मोबाइल नंबर") },
+                    label = { Text("Customer Mobile / મોબાઈલ નંબર") },
+                    placeholder = { Text("+91 XXXXX XX520") },
                     leadingIcon = { Icon(Icons.Default.Phone, contentDescription = null, tint = StudioAmber) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                     modifier = Modifier.fillMaxWidth().testTag("edit_customer_phone"),
@@ -208,15 +241,58 @@ fun EditBookingDialog(
                             fontWeight = FontWeight.Bold,
                             color = TextLightPrimary
                         )
+
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = StudioAmber.copy(alpha = 0.2f),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, StudioAmber),
+                            modifier = Modifier
+                                .testTag("add_booking_date_button")
+                                .clickable { showDatePicker() }
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Add,
+                                    contentDescription = "Add Date",
+                                    tint = StudioAmber,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = "+ Add Date / तारीख जोड़ें",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = StudioAmber
+                                )
+                            }
+                        }
                     }
                     Spacer(modifier = Modifier.height(6.dp))
 
                     if (activeDates.isEmpty()) {
-                        Text(
-                            text = "No dates remaining in this booking.",
-                            fontSize = 12.sp,
-                            color = StatusBookedRed
-                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "No dates selected / कोई तारीख नहीं चुनी गई",
+                                fontSize = 12.sp,
+                                color = StatusBookedRed
+                            )
+                            OutlinedButton(
+                                onClick = { showDatePicker() },
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier.height(34.dp)
+                            ) {
+                                Icon(Icons.Default.Add, contentDescription = null, tint = StudioAmber, modifier = Modifier.size(14.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("+ Add Date", fontSize = 11.sp, color = StudioAmber)
+                            }
+                        }
                     } else {
                         FlowRow(
                             modifier = Modifier.fillMaxWidth(),
@@ -253,6 +329,35 @@ fun EditBookingDialog(
                                                 }
                                         )
                                     }
+                                }
+                            }
+
+                            // Add Date Chip inside FlowRow
+                            Surface(
+                                shape = RoundedCornerShape(10.dp),
+                                color = StudioSurface,
+                                border = androidx.compose.foundation.BorderStroke(1.dp, StudioAmber.copy(alpha = 0.7f)),
+                                modifier = Modifier
+                                    .testTag("add_date_chip")
+                                    .clickable { showDatePicker() }
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Add,
+                                        contentDescription = null,
+                                        tint = StudioAmber,
+                                        modifier = Modifier.size(13.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = "+ Date / तारीख",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = StudioAmber
+                                    )
                                 }
                             }
                         }

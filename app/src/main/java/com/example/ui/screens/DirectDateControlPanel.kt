@@ -279,8 +279,9 @@ fun DirectDateControlPanel(
                             color = StudioAmber,
                             fontSize = 13.sp
                         )
+                        val displayPhone = if (singleBooking.customerPhone == "9898012345" || singleBooking.customerPhone == "9876543210") "+91 XXXXX XX520" else singleBooking.customerPhone
                         Text(
-                            text = "Phone: ${singleBooking.customerPhone} • Type: ${singleBooking.workType}",
+                            text = "Phone: $displayPhone • Type: ${singleBooking.workType}",
                             fontSize = 12.sp,
                             color = TextLightSecondary
                         )
@@ -460,7 +461,8 @@ fun DirectDateControlPanel(
                     OutlinedTextField(
                         value = customerPhone,
                         onValueChange = { customerPhone = it },
-                        label = { Text("Customer Mobile / मोबाइल नंबर") },
+                        label = { Text("Customer Mobile / મોબાઈલ નંબર") },
+                        placeholder = { Text("+91 XXXXX XX520") },
                         leadingIcon = { Icon(Icons.Default.Phone, contentDescription = null, tint = StudioAmber) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                         modifier = Modifier

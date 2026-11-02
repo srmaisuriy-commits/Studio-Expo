@@ -60,8 +60,8 @@ abstract class AppDatabase : RoomDatabase() {
                         id = 1,
                         studioName = "Studio Expo",
                         photographerName = "Rajesh Maisuriya",
-                        phone = "9876543210",
-                        whatsapp = "9876543210",
+                        phone = "+91 XXXXX XX520",
+                        whatsapp = "+91 XXXXX XX520",
                         city = "Ahmedabad, Gujarat",
                         ownerPin = "1234",
                         bio = "Luxury Wedding, Pre-Wedding & Cinematic Fashion Photography",
@@ -78,8 +78,8 @@ abstract class AppDatabase : RoomDatabase() {
                 val dates = listOf<StudioDateSlot>(
                     StudioDateSlot(dateStr = "2026-10-20", status = DateStatus.FREE, note = "Available for Wedding/Shoot", slotType = SlotType.FULL_DAY),
                     StudioDateSlot(dateStr = "2026-10-22", status = DateStatus.FREE, note = "Available", slotType = SlotType.FULL_DAY),
-                    StudioDateSlot(dateStr = "2026-10-24", status = DateStatus.BOOKED, note = "Shoot in Ahmedabad", slotType = SlotType.FULL_DAY, bookedCustomerName = "Amit Patel", bookedCustomerPhone = "9898012345", workType = "Traditional Photographer + Cinematographer", amount = 35000.0),
-                    StudioDateSlot(dateStr = "2026-10-25", status = DateStatus.BOOKED, note = "Candid & Drone Shoot", slotType = SlotType.FULL_DAY, bookedCustomerName = "Amit Patel", bookedCustomerPhone = "9898012345", workType = "Candid Photographer + Drone Pilot", amount = 30000.0),
+                    StudioDateSlot(dateStr = "2026-10-24", status = DateStatus.BOOKED, note = "Shoot in Ahmedabad", slotType = SlotType.FULL_DAY, bookedCustomerName = "Amit Patel", bookedCustomerPhone = "+91 XXXXX XX520", workType = "Traditional Photographer + Cinematographer", amount = 35000.0),
+                    StudioDateSlot(dateStr = "2026-10-25", status = DateStatus.BOOKED, note = "Candid & Drone Shoot", slotType = SlotType.FULL_DAY, bookedCustomerName = "Amit Patel", bookedCustomerPhone = "+91 XXXXX XX520", workType = "Candid Photographer + Drone Pilot", amount = 30000.0),
                     StudioDateSlot(dateStr = "2026-10-28", status = DateStatus.FREE, note = "Available for Booking", slotType = SlotType.FULL_DAY),
                     StudioDateSlot(dateStr = "2026-11-05", status = DateStatus.FREE, note = "Available for Shoot", slotType = SlotType.FULL_DAY),
                     StudioDateSlot(dateStr = "2026-11-12", status = DateStatus.FREE, note = "Available", slotType = SlotType.FULL_DAY)

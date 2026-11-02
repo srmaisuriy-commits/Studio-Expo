@@ -3,6 +3,7 @@
     "StudioProfile": {
       "collection": "studio_profile",
       "fields": {
+        "studioId": { "type": "string" },
         "studioName": { "type": "string" },
         "photographerName": { "type": "string" },
         "phone": { "type": "string" },
@@ -14,12 +15,20 @@
         "customWhatsAppNote": { "type": "string" },
         "customHeaderGreeting": { "type": "string" },
         "customFooterNote": { "type": "string" },
-        "perDayRate": { "type": "number" }
+        "perDayRate": { "type": "number" },
+        "rateTraditionalPhoto": { "type": "number" },
+        "rateTraditionalVideo": { "type": "number" },
+        "rateCandidPhoto": { "type": "number" },
+        "rateSemiCandidPhoto": { "type": "number" },
+        "rateCinematographer": { "type": "number" },
+        "rateDronePilot": { "type": "number" },
+        "rateSupportingCrew": { "type": "number" }
       }
     },
     "StudioDateSlot": {
       "collection": "studio_date_slots",
       "fields": {
+        "studioId": { "type": "string" },
         "dateStr": { "type": "string" },
         "status": { "type": "string" },
         "slotType": { "type": "string" },
@@ -35,6 +44,7 @@
     "BookingRequest": {
       "collection": "booking_requests",
       "fields": {
+        "studioId": { "type": "string" },
         "dateStr": { "type": "string" },
         "customerName": { "type": "string" },
         "customerPhone": { "type": "string" },

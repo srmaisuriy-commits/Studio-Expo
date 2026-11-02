@@ -32,9 +32,16 @@ class StudioRepository(
         list.filter { it.status == BookingStatus.PENDING || it.status == BookingStatus.CONFIRMED }
     }
 
-    suspend fun getProfileSync(): StudioProfile? = dao.getProfileSync()
+    private var cachedProfile: StudioProfile? = null
+
+    suspend fun getProfileSync(): StudioProfile? {
+        val p = dao.getProfileSync()
+        if (p != null) cachedProfile = p
+        return p
+    }
 
     suspend fun updateProfile(profile: StudioProfile) {
+        cachedProfile = profile
         dao.updateProfile(profile)
         syncProfileToFirestore(profile)
     }
@@ -215,7 +222,10 @@ class StudioRepository(
     ): String {
         val studioName = profile?.studioName ?: "Studio Expo"
         val photographer = profile?.photographerName ?: "Rajesh Maisuriya"
-        val phone = profile?.whatsapp ?: profile?.phone ?: "9876543210"
+        val phone = profile?.whatsapp ?: profile?.phone ?: "+91 XXXXX XX520"
+        val formattedPhone = if (phone.startsWith("+91")) phone else "+91 $phone"
+        val studioSlug = profile?.photographerName?.trim()?.lowercase()?.replace(Regex("[^a-z0-9]+"), "_")?.trim('_')?.ifBlank { "rajesh_maisuriya" } ?: "rajesh_maisuriya"
+        val webBookingUrl = "https://ais-pre-kobo3baivxg6hgtkuscf6x-415462319358.asia-southeast1.run.app/?studio=$studioSlug"
 
         val cameraGear = customCameraGear ?: profile?.cameraGearDetails ?: "Sony FX3 / A7 IV • DJI Drone • 4K Cinematic Video • Gimbal & Pro Lights"
         val note = customNote ?: profile?.customWhatsAppNote ?: "Latest 4K Cinematic Camera & Drone Coverage Available / नवीनतम 4K सिनेमैटिक कैमरा और ड्रोन कवरेज उपलब्ध है।"
@@ -250,10 +260,20 @@ $note
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
 $footer
-📲 *Contact / WhatsApp:* +91 $phone
+📲 *Contact / WhatsApp:* $formattedPhone
 👤 *Lead Artist:* $photographer
-🌐 *Live Web Booking:* https://studioexpo.app/book
+🌐 *Live Web Booking:* $webBookingUrl
         """.trimIndent()
+    }
+
+    fun getStudioId(): String {
+        val p = cachedProfile
+        val clean = p?.photographerName?.trim()?.lowercase()?.replace(Regex("[^a-z0-9]+"), "_")?.trim('_')
+        return if (!clean.isNullOrBlank()) clean else "rajesh_maisuriya"
+    }
+
+    fun getWebBookingUrl(): String {
+        return "https://ais-pre-kobo3baivxg6hgtkuscf6x-415462319358.asia-southeast1.run.app/?studio=${getStudioId()}"
     }
 
     // --- Firebase Firestore Synchronization ---
@@ -262,19 +282,28 @@ $footer
         val ctx = context ?: return
         try {
             val db = FirebaseConfig.getFirestore(ctx) ?: return
+            val studioId = getStudioId()
+
+            // 1. Listen for real-time calendar slot updates from Firestore
             db.collection("studio_date_slots")
                 .addSnapshotListener { snapshot, error ->
                     if (error != null || snapshot == null) return@addSnapshotListener
                     scope.launch(Dispatchers.IO) {
                         for (doc in snapshot.documents) {
-                            val dateStr = doc.getString("dateStr") ?: doc.id
+                            val docStudio = doc.getString("studioId")
+                            // Filter by studioId (or unassigned/default for Rajesh Maisuriya)
+                            if (docStudio != null && docStudio != studioId && !doc.id.startsWith("${studioId}_")) {
+                                continue
+                            }
+                            val dateStr = doc.getString("dateStr") ?: doc.id.replace("${studioId}_", "")
                             val statusStr = doc.getString("status") ?: DateStatus.FREE.name
                             val status = try { DateStatus.valueOf(statusStr) } catch (_: Exception) { DateStatus.FREE }
                             val slotTypeStr = doc.getString("slotType") ?: SlotType.FULL_DAY.name
                             val slotType = try { SlotType.valueOf(slotTypeStr) } catch (_: Exception) { SlotType.FULL_DAY }
                             val note = doc.getString("note") ?: ""
                             val name = doc.getString("bookedCustomerName") ?: ""
-                            val phone = doc.getString("bookedCustomerPhone") ?: ""
+                            val phoneRaw = doc.getString("bookedCustomerPhone") ?: ""
+                            val phone = if (phoneRaw == "9898012345" || phoneRaw == "9876543210") "+91 XXXXX XX520" else phoneRaw
                             val workType = doc.getString("workType") ?: ""
                             val amount = doc.getDouble("amount") ?: 0.0
 
@@ -292,6 +321,50 @@ $footer
                         }
                     }
                 }
+
+            // 2. Listen for incoming customer booking requests submitted via web link in real-time
+            db.collection("booking_requests")
+                .addSnapshotListener { snapshot, error ->
+                    if (error != null || snapshot == null) return@addSnapshotListener
+                    scope.launch(Dispatchers.IO) {
+                        for (doc in snapshot.documents) {
+                            val docStudio = doc.getString("studioId")
+                            // Strictly isolate: Only receive bookings submitted for THIS studio owner!
+                            if (docStudio != null && docStudio != studioId && !doc.id.startsWith("${studioId}_")) {
+                                continue
+                            }
+                            val dateStr = doc.getString("dateStr") ?: ""
+                            val customerName = doc.getString("customerName") ?: ""
+                            val customerPhoneRaw = doc.getString("customerPhone") ?: ""
+                            val customerPhone = if (customerPhoneRaw == "9898012345" || customerPhoneRaw == "9876543210") "+91 XXXXX XX520" else customerPhoneRaw
+                            if (dateStr.isBlank() || customerName.isBlank()) continue
+
+                            val workType = doc.getString("workType") ?: "Traditional Photographer"
+                            val amount = doc.getDouble("amount") ?: 0.0
+                            val location = doc.getString("location") ?: ""
+                            val notes = doc.getString("notes") ?: ""
+                            val statusStr = doc.getString("status") ?: BookingStatus.PENDING.name
+                            val status = try { BookingStatus.valueOf(statusStr) } catch (_: Exception) { BookingStatus.PENDING }
+                            val createdAt = doc.getLong("createdAt") ?: System.currentTimeMillis()
+
+                            val existing = dao.getBookingByPhoneAndDate(customerPhone, dateStr)
+                            if (existing == null) {
+                                val booking = BookingRequest(
+                                    dateStr = dateStr,
+                                    customerName = customerName,
+                                    customerPhone = customerPhone,
+                                    workType = workType,
+                                    amount = amount,
+                                    location = location,
+                                    notes = notes,
+                                    status = status,
+                                    createdAt = createdAt
+                                )
+                                dao.insertBooking(booking)
+                            }
+                        }
+                    }
+                }
         } catch (e: Exception) {
             Log.e("StudioRepository", "Firestore listener setup error: ${e.message}")
         }
@@ -301,7 +374,9 @@ $footer
         val ctx = context ?: return
         try {
             val db = FirebaseConfig.getFirestore(ctx) ?: return
+            val studioId = getStudioId()
             val data = hashMapOf(
+                "studioId" to studioId,
                 "dateStr" to slot.dateStr,
                 "status" to slot.status.name,
                 "slotType" to slot.slotType.name,
@@ -312,6 +387,7 @@ $footer
                 "amount" to slot.amount,
                 "updatedAt" to System.currentTimeMillis()
             )
+            db.collection("studio_date_slots").document("${studioId}_${slot.dateStr}").set(data)
             db.collection("studio_date_slots").document(slot.dateStr).set(data)
         } catch (e: Exception) {
             Log.e("StudioRepository", "Firestore slot sync error: ${e.message}")
@@ -322,6 +398,8 @@ $footer
         val ctx = context ?: return
         try {
             val db = FirebaseConfig.getFirestore(ctx) ?: return
+            val studioId = getStudioId()
+            db.collection("studio_date_slots").document("${studioId}_${dateStr}").delete()
             db.collection("studio_date_slots").document(dateStr).delete()
         } catch (e: Exception) {
             Log.e("StudioRepository", "Firestore slot delete error: ${e.message}")
@@ -332,7 +410,9 @@ $footer
         val ctx = context ?: return
         try {
             val db = FirebaseConfig.getFirestore(ctx) ?: return
+            val studioId = getStudioId()
             val data = hashMapOf(
+                "studioId" to studioId,
                 "studioName" to profile.studioName,
                 "photographerName" to profile.photographerName,
                 "phone" to profile.phone,
@@ -344,8 +424,17 @@ $footer
                 "customWhatsAppNote" to profile.customWhatsAppNote,
                 "customHeaderGreeting" to profile.customHeaderGreeting,
                 "customFooterNote" to profile.customFooterNote,
-                "perDayRate" to profile.perDayRate
+                "perDayRate" to profile.perDayRate,
+                "rateTraditionalPhoto" to profile.rateTraditionalPhoto,
+                "rateTraditionalVideo" to profile.rateTraditionalVideo,
+                "rateCandidPhoto" to profile.rateCandidPhoto,
+                "rateSemiCandidPhoto" to profile.rateSemiCandidPhoto,
+                "rateCinematographer" to profile.rateCinematographer,
+                "rateDronePilot" to profile.rateDronePilot,
+                "rateSupportingCrew" to profile.rateSupportingCrew,
+                "updatedAt" to System.currentTimeMillis()
             )
+            db.collection("studio_profile").document(studioId).set(data)
             db.collection("studio_profile").document("default").set(data)
         } catch (e: Exception) {
             Log.e("StudioRepository", "Firestore profile sync error: ${e.message}")
@@ -356,8 +445,10 @@ $footer
         val ctx = context ?: return
         try {
             val db = FirebaseConfig.getFirestore(ctx) ?: return
+            val studioId = getStudioId()
             val data = hashMapOf(
                 "id" to booking.id,
+                "studioId" to studioId,
                 "dateStr" to booking.dateStr,
                 "customerName" to booking.customerName,
                 "customerPhone" to booking.customerPhone,
@@ -368,10 +459,29 @@ $footer
                 "status" to booking.status.name,
                 "createdAt" to booking.createdAt
             )
-            val docId = if (booking.id > 0) booking.id.toString() else "${booking.dateStr}_${booking.customerPhone}"
+            val docId = if (booking.id > 0) "${studioId}_${booking.id}" else "${studioId}_${booking.dateStr}_${booking.customerPhone}"
             db.collection("booking_requests").document(docId).set(data)
         } catch (e: Exception) {
             Log.e("StudioRepository", "Firestore booking sync error: ${e.message}")
+        }
+    }
+
+    suspend fun sanitizeOldDemoNumbers() {
+        try {
+            val allSlots = dao.getAllDateSlotsSync()
+            allSlots.forEach { slot ->
+                if (slot.bookedCustomerPhone == "9898012345" || slot.bookedCustomerPhone == "9876543210") {
+                    dao.insertOrUpdateDateSlot(slot.copy(bookedCustomerPhone = "+91 XXXXX XX520"))
+                }
+            }
+            val allBookings = dao.getAllBookingsSync()
+            allBookings.forEach { booking ->
+                if (booking.customerPhone == "9898012345" || booking.customerPhone == "9876543210") {
+                    dao.insertBooking(booking.copy(customerPhone = "+91 XXXXX XX520"))
+                }
+            }
+        } catch (e: Exception) {
+            Log.e("StudioRepository", "Error sanitizing demo numbers: ${e.message}")
         }
     }
 }

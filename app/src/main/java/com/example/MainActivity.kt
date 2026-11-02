@@ -20,7 +20,16 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        FirebaseConfig.initialize(applicationContext)
+        try {
+            FirebaseConfig.initialize(applicationContext)
+        } catch (t: Throwable) {
+            android.util.Log.e("MainActivity", "Firebase init: ${t.message}")
+        }
+        try {
+            com.example.ads.AdMobManager.initialize(applicationContext)
+        } catch (t: Throwable) {
+            android.util.Log.e("MainActivity", "AdMob init: ${t.message}")
+        }
         enableEdgeToEdge()
         handleIncomingIntent(intent)
         setContent {

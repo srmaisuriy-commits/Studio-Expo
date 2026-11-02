@@ -22,6 +22,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Call
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Message
 import androidx.compose.material.icons.filled.Share
@@ -44,6 +45,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -107,9 +109,10 @@ fun OwnerDashboardScreen(
             val name = slot.bookedCustomerName?.takeIf { it.isNotBlank() }
                 ?: matchingBooking?.customerName?.takeIf { it.isNotBlank() }
                 ?: "Studio Booking"
-            val phone = slot.bookedCustomerPhone?.takeIf { it.isNotBlank() }
+            val rawPhone = slot.bookedCustomerPhone?.takeIf { it.isNotBlank() }
                 ?: matchingBooking?.customerPhone?.takeIf { it.isNotBlank() }
                 ?: ""
+            val phone = if (rawPhone == "9898012345" || rawPhone == "9876543210") "+91 XXXXX XX520" else rawPhone
             val key = "$name|$phone"
             groupMap.getOrPut(key) { mutableListOf() }.add(slot)
         }
@@ -273,6 +276,95 @@ fun OwnerDashboardScreen(
                 }
             }
 
+            // Live Customer Web Booking Link Card
+            item {
+                val context = LocalContext.current
+                val studioSlug = profile?.photographerName?.trim()?.lowercase()?.replace(Regex("[^a-z0-9]+"), "_")?.trim('_')?.ifBlank { "rajesh_maisuriya" } ?: "rajesh_maisuriya"
+                val liveWebUrl = "https://ais-pre-kobo3baivxg6hgtkuscf6x-415462319358.asia-southeast1.run.app/?studio=$studioSlug"
+
+                Card(
+                    modifier = Modifier.fillMaxWidth().testTag("live_web_link_card"),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, StudioAmber.copy(alpha = 0.5f))
+                ) {
+                    Column(
+                        modifier = Modifier.padding(14.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("🌐", fontSize = 16.sp)
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Column {
+                                Text(
+                                    text = "Live Calendar Web Link / लाइव वेब लिंक",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 13.sp,
+                                    color = StudioAmber
+                                )
+                                Text(
+                                    text = "Send this link to customers to book live / ग्राहकों को भेजें",
+                                    fontSize = 10.sp,
+                                    color = TextLightSecondary
+                                )
+                            }
+                        }
+
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = StudioSurface,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                text = liveWebUrl,
+                                fontSize = 11.sp,
+                                color = TextLightPrimary,
+                                fontWeight = FontWeight.Medium,
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                maxLines = 1
+                            )
+                        }
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            OutlinedButton(
+                                onClick = {
+                                    val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                                    val clip = android.content.ClipData.newPlainText("Live Web Link", liveWebUrl)
+                                    clipboard.setPrimaryClip(clip)
+                                    android.widget.Toast.makeText(context, "Link copied / लिंक कॉपी हो गया!", android.widget.Toast.LENGTH_SHORT).show()
+                                },
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier.weight(1f).height(38.dp)
+                            ) {
+                                Icon(Icons.Default.ContentCopy, contentDescription = null, tint = StudioAmber, modifier = Modifier.size(14.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Copy Link", fontSize = 11.sp, color = StudioAmber)
+                            }
+
+                            Button(
+                                onClick = {
+                                    val shareIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                                        type = "text/plain"
+                                        putExtra(android.content.Intent.EXTRA_TEXT, "Hello! Check my live photography availability calendar & book your dates directly here:\n$liveWebUrl")
+                                    }
+                                    context.startActivity(android.content.Intent.createChooser(shareIntent, "Share Live Calendar"))
+                                },
+                                shape = RoundedCornerShape(8.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = StatusFreeGreen),
+                                modifier = Modifier.weight(1f).height(38.dp)
+                            ) {
+                                Icon(Icons.Default.Share, contentDescription = null, tint = Color.White, modifier = Modifier.size(14.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Share Link", fontSize = 11.sp, color = Color.White, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                }
+            }
+
             // Booked Dates Section (Customer Name prominently FIRST, multi-dates grouped, crew shown, edit option with 7 crew list)
             item {
                 Row(
@@ -341,8 +433,9 @@ fun OwnerDashboardScreen(
                                         color = MaterialTheme.colorScheme.onSurface
                                     )
                                     if (group.customerPhone.isNotBlank()) {
+                                        val displayPhone = if (group.customerPhone == "9898012345" || group.customerPhone == "9876543210") "+91 XXXXX XX520" else group.customerPhone
                                         Text(
-                                            text = "📞 ${group.customerPhone}",
+                                            text = "📞 $displayPhone",
                                             fontSize = 13.sp,
                                             fontWeight = FontWeight.Medium,
                                             color = TextLightSecondary
@@ -493,6 +586,11 @@ fun OwnerDashboardScreen(
                         )
                     }
                 }
+            }
+
+            // Non-disturbing Google AdMob Banner
+            item {
+                com.example.ui.components.AdMobBannerView(modifier = Modifier.padding(top = 4.dp))
             }
 
             item { Spacer(modifier = Modifier.height(20.dp)) }

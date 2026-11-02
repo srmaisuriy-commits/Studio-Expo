@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
@@ -25,6 +26,40 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.MyApplication">
+
+        <!-- Google AdMob Test App ID -->
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="ca-app-pub-3940256099942544~3347511713" />
+
+        <!-- Delay AdMob App Measurement init to prevent emulator adservices measurement binding -->
+        <meta-data
+            android:name="com.google.android.gms.ads.DELAY_APP_MEASUREMENT_INIT"
+            android:value="true" />
+        <meta-data
+            android:name="google_analytics_adid_collection_enabled"
+            android:value="false" />
+        <meta-data
+            android:name="google_analytics_default_allow_ad_personalization_signals"
+            android:value="false" />
+        <meta-data
+            android:name="firebase_analytics_collection_deactivated"
+            android:value="true" />
+
+        <!-- Disable automatic MobileAdsInitProvider so AdMob initializes safely only on user devices -->
+        <provider
+            android:name="com.google.android.gms.ads.MobileAdsInitProvider"
+            android:authorities="${applicationId}.mobileadsinitprovider"
+            tools:node="remove" />
+
+        <!-- Remove Privacy Sandbox adservices measurement config that causes onNullBinding on emulator -->
+        <property
+            android:name="android.adservices.AD_SERVICES_CONFIG"
+            tools:node="remove" />
+
+        <uses-library
+            android:name="android.ext.adservices"
+            tools:node="remove" />
         <activity
             android:name="com.example.MainActivity"
             android:exported="true"
