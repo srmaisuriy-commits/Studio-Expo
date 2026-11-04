@@ -41,6 +41,24 @@ enum class OwnerScreen {
 class StudioViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository: StudioRepository
+    private val subscriptionManager = com.example.data.SubscriptionManager(application)
+
+    val isSubscribed: StateFlow<Boolean> = subscriptionManager.isSubscribed
+    val remainingTrialDays: StateFlow<Int> = subscriptionManager.remainingTrialDays
+    val isTrialExpired: StateFlow<Boolean> = subscriptionManager.isTrialExpired
+
+    fun activateSubscription() {
+        subscriptionManager.activateOneYearSubscription()
+        showToast("🎉 1 Year VIP Subscription Activated! / 1 साल का VIP सब्सक्रिप्शन शुरू हो गया है!")
+    }
+
+    fun simulateTrialExpired() {
+        subscriptionManager.simulateTrialExpired()
+    }
+
+    fun resetTrial() {
+        subscriptionManager.resetTrial()
+    }
 
     init {
         val database = AppDatabase.getDatabase(application, viewModelScope)
@@ -70,9 +88,17 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
     private val _currentRole = MutableStateFlow(AppRole.OWNER)
     val currentRole: StateFlow<AppRole> = _currentRole.asStateFlow()
 
-    // Owner Auth state
-    private val _isOwnerAuthenticated = MutableStateFlow(false)
+    // Owner Auth state & persistence
+    private val authPrefs = application.getSharedPreferences("studio_owner_auth_prefs", Context.MODE_PRIVATE)
+    private val _isOwnerAuthenticated = MutableStateFlow(
+        authPrefs.getBoolean("is_owner_authenticated", false) || (FirebaseConfig.auth?.currentUser != null)
+    )
     val isOwnerAuthenticated: StateFlow<Boolean> = _isOwnerAuthenticated.asStateFlow()
+
+    private fun markOwnerAuthenticated(authenticated: Boolean) {
+        authPrefs.edit().putBoolean("is_owner_authenticated", authenticated).apply()
+        _isOwnerAuthenticated.value = authenticated
+    }
 
     private val _pinError = MutableStateFlow<String?>(null)
     val pinError: StateFlow<String?> = _pinError.asStateFlow()
@@ -166,7 +192,7 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
         val currentProfile = profile.value
         val correctPin = currentProfile?.ownerPin ?: "1234"
         if (enteredPin.trim() == correctPin || enteredPin.trim() == "1234") {
-            _isOwnerAuthenticated.value = true
+            markOwnerAuthenticated(true)
             _pinError.value = null
             showToast("Welcome ${currentProfile?.photographerName ?: "Owner"}!")
         } else {
@@ -187,7 +213,7 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
 
         // Accept owner credentials: pin match or minimum password length
         if (trimmedPass == validPin || trimmedPass.length >= 4) {
-            _isOwnerAuthenticated.value = true
+            markOwnerAuthenticated(true)
             _pinError.value = null
             showToast("Welcome $trimmedEmail")
         } else {
@@ -203,7 +229,7 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
             _pinError.value = "Password must be at least 4 characters"
             return
         }
-        _isOwnerAuthenticated.value = true
+        markOwnerAuthenticated(true)
         _pinError.value = null
         showToast("Account created! Logged in as $trimmedEmail")
     }
@@ -217,22 +243,22 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
                     val credential = GoogleAuthProvider.getCredential(idToken, null)
                     authInstance.signInWithCredential(credential)
                         .addOnSuccessListener { userCredential ->
-                            _isOwnerAuthenticated.value = true
+                            markOwnerAuthenticated(true)
                             _pinError.value = null
                             showToast("Welcome ${userCredential.user?.displayName ?: userCredential.user?.email}")
                         }
                         .addOnFailureListener {
-                            _isOwnerAuthenticated.value = true
+                            markOwnerAuthenticated(true)
                             _pinError.value = null
                             showToast("Welcome Google User")
                         }
                 } else {
-                    _isOwnerAuthenticated.value = true
+                    markOwnerAuthenticated(true)
                     _pinError.value = null
                     showToast("Welcome Google User")
                 }
             } catch (e: Exception) {
-                _isOwnerAuthenticated.value = true
+                markOwnerAuthenticated(true)
                 _pinError.value = null
                 showToast("Welcome Google User")
             }
@@ -241,7 +267,7 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
 
     // Direct Login (For offline or simulated Google session)
     fun authenticateDirectly(userIdentifier: String) {
-        _isOwnerAuthenticated.value = true
+        markOwnerAuthenticated(true)
         _pinError.value = null
         showToast("Logged in as $userIdentifier")
     }
@@ -250,7 +276,7 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
         try {
             FirebaseConfig.auth?.signOut()
         } catch (_: Exception) {}
-        _isOwnerAuthenticated.value = false
+        markOwnerAuthenticated(false)
         _pinError.value = null
     }
 

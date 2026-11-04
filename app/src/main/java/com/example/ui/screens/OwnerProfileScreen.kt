@@ -37,6 +37,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -67,6 +68,9 @@ fun OwnerProfileScreen(
     profile: StudioProfile?,
     onSaveProfile: (StudioProfile) -> Unit,
     onLogout: () -> Unit,
+    remainingTrialDays: Int = 30,
+    isSubscribed: Boolean = false,
+    onUpgradeSubscription: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -111,6 +115,85 @@ fun OwnerProfileScreen(
                 fontSize = 12.sp,
                 color = TextLightSecondary
             )
+        }
+
+        // VIP Membership & Trial Status Card
+        item {
+            Card(
+                colors = CardDefaults.cardColors(
+                    containerColor = if (isSubscribed) Color(0xFF1B2A1E) else Color(0xFF231B0E)
+                ),
+                shape = RoundedCornerShape(14.dp),
+                border = androidx.compose.foundation.BorderStroke(
+                    1.dp,
+                    if (isSubscribed) Color(0xFF4ADE80) else StudioAmber
+                ),
+                modifier = Modifier.testTag("profile_membership_card")
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(text = if (isSubscribed) "👑 " else "⏳ ", fontSize = 16.sp)
+                            Text(
+                                text = if (isSubscribed) "VIP Membership Active (1 Year)" else "Free Trial ($remainingTrialDays Days Left)",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (isSubscribed) Color(0xFF4ADE80) else StudioAmber
+                            )
+                        }
+                        if (!isSubscribed) {
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = Color(0xFFE65100).copy(alpha = 0.25f),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFFF9800))
+                            ) {
+                                Text(
+                                    text = "LIMITED OFFER",
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = Color(0xFFFFB74D),
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
+                    }
+
+                    Text(
+                        text = if (isSubscribed) "Your VIP plan is active. All premium features unlocked / आपका 1 साल का VIP प्लान सक्रिय है।"
+                        else "Special 1-Year VIP Plan available at ₹149 (सीमित समय के लिए केवल ₹149 में 1 साल का एक्सेस)",
+                        fontSize = 11.sp,
+                        color = TextLightSecondary
+                    )
+
+                    if (!isSubscribed) {
+                        Button(
+                            onClick = onUpgradeSubscription,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(40.dp)
+                                .testTag("btn_upgrade_profile"),
+                            shape = RoundedCornerShape(10.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = StudioAmber,
+                                contentColor = Color.Black
+                            )
+                        ) {
+                            Text(
+                                text = "💳 Get 1 Year Access @ ₹149 (85% OFF)",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
+            }
         }
 
         // Studio Info Card

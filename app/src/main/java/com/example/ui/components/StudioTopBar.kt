@@ -49,6 +49,8 @@ fun StudioTopBar(
     onRoleSelected: ((AppRole) -> Unit)? = null,
     onShareClick: (() -> Unit)? = null,
     onMessageTemplateClick: (() -> Unit)? = null,
+    remainingTrialDays: Int = 30,
+    isSubscribed: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     Surface(
@@ -88,17 +90,49 @@ fun StudioTopBar(
                     Column {
                         Text(
                             text = studioName,
-                            fontSize = 18.sp,
+                            fontSize = 17.sp,
                             fontWeight = FontWeight.ExtraBold,
                             color = MaterialTheme.colorScheme.onSurface,
                             letterSpacing = 0.5.sp
                         )
-                        Text(
-                            text = if (currentRole == AppRole.OWNER) "Studio Owner Dashboard 🔐" else "Customer Booking Portal 🌐",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = if (currentRole == AppRole.OWNER) StudioAmber else MaterialTheme.colorScheme.primary
-                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = if (currentRole == AppRole.OWNER) "Studio Owner 🔐" else "Customer Portal 🌐",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = if (currentRole == AppRole.OWNER) StudioAmber else MaterialTheme.colorScheme.primary
+                            )
+                            if (currentRole == AppRole.OWNER) {
+                                Spacer(modifier = Modifier.width(6.dp))
+                                if (isSubscribed) {
+                                    Surface(
+                                        shape = RoundedCornerShape(4.dp),
+                                        color = StatusFreeGreen.copy(alpha = 0.2f)
+                                    ) {
+                                        Text(
+                                            text = "👑 VIP 1 Year",
+                                            fontSize = 9.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = StatusFreeGreen,
+                                            modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp)
+                                        )
+                                    }
+                                } else {
+                                    Surface(
+                                        shape = RoundedCornerShape(4.dp),
+                                        color = StudioAmber.copy(alpha = 0.2f)
+                                    ) {
+                                        Text(
+                                            text = "Trial: $remainingTrialDays Days",
+                                            fontSize = 9.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = StudioAmber,
+                                            modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
 

@@ -47,6 +47,10 @@ fun MainScreen(
     val activeBookingDetail by viewModel.activeBookingDetail.collectAsStateWithLifecycle()
     val bookingSuccessDialog by viewModel.bookingSuccessDialog.collectAsStateWithLifecycle()
 
+    val isTrialExpired by viewModel.isTrialExpired.collectAsStateWithLifecycle()
+    val isSubscribed by viewModel.isSubscribed.collectAsStateWithLifecycle()
+    val remainingTrialDays by viewModel.remainingTrialDays.collectAsStateWithLifecycle()
+
     // Back button handling: In owner mode, navigate back to Dashboard before closing
     BackHandler(enabled = currentRole == AppRole.OWNER && isOwnerAuthenticated && currentOwnerScreen != OwnerScreen.DASHBOARD) {
         viewModel.setOwnerScreen(OwnerScreen.DASHBOARD)
@@ -60,7 +64,9 @@ fun MainScreen(
                     currentRole = AppRole.OWNER,
                     studioName = profile?.studioName ?: "Studio Expo",
                     onShareClick = { viewModel.openShareDialog() },
-                    onMessageTemplateClick = { viewModel.openMessageTemplateDialog() }
+                    onMessageTemplateClick = { viewModel.openMessageTemplateDialog() },
+                    remainingTrialDays = remainingTrialDays,
+                    isSubscribed = isSubscribed
                 )
             }
         },
@@ -190,7 +196,10 @@ fun MainScreen(
                                 OwnerProfileScreen(
                                     profile = profile,
                                     onSaveProfile = { updated -> viewModel.saveProfile(updated) },
-                                    onLogout = { viewModel.logoutOwner() }
+                                    onLogout = { viewModel.logoutOwner() },
+                                    remainingTrialDays = remainingTrialDays,
+                                    isSubscribed = isSubscribed,
+                                    onUpgradeSubscription = { viewModel.activateSubscription() }
                                 )
                             }
                         }
@@ -249,6 +258,15 @@ fun MainScreen(
             onDismiss = { viewModel.closeBookingDetail() },
             onConfirm = { b -> viewModel.confirmBooking(b) },
             onReject = { b -> viewModel.rejectBooking(b) }
+        )
+    }
+
+    // 30-Day Free Trial Paywall Overlay (User request: 30 day trial count pate pachi card)
+    if (isTrialExpired && !isSubscribed) {
+        SubscriptionPaywallOverlay(
+            onSubscribe = {
+                viewModel.activateSubscription()
+            }
         )
     }
 }
