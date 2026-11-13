@@ -138,24 +138,48 @@ class StudioRepository(
     suspend fun confirmBooking(bookingId: Long, dateStr: String) {
         dao.updateBookingStatus(bookingId, BookingStatus.CONFIRMED)
         val booking = dao.getBookingById(bookingId)
-        val slot = StudioDateSlot(
-            dateStr = dateStr,
-            status = DateStatus.BOOKED,
-            note = booking?.workType ?: "Booked",
-            bookedCustomerName = booking?.customerName ?: "",
-            bookedCustomerPhone = booking?.customerPhone ?: "",
-            workType = booking?.workType ?: "",
-            amount = booking?.requestedAmount ?: 0.0
-        )
-        dao.insertOrUpdateDateSlot(slot)
-        syncSlotToFirestore(slot)
-        booking?.let { syncBookingToFirestore(it.copy(status = BookingStatus.CONFIRMED)) }
+        val dates = dateStr.split(",").map { it.trim() }.filter { it.isNotBlank() }.ifEmpty { listOf(dateStr) }
+        val perDateAmount = if (dates.size > 1 && (booking?.requestedAmount ?: 0.0) > 0.0) {
+            (booking?.requestedAmount ?: 0.0) / dates.size
+        } else {
+            booking?.requestedAmount ?: 0.0
+        }
+        dates.forEach { singleDate ->
+            val slot = StudioDateSlot(
+                dateStr = singleDate,
+                status = DateStatus.BOOKED,
+                note = booking?.workType ?: "Booked",
+                bookedCustomerName = booking?.customerName ?: "",
+                bookedCustomerPhone = booking?.customerPhone ?: "",
+                workType = booking?.workType ?: "",
+                amount = perDateAmount
+            )
+            dao.insertOrUpdateDateSlot(slot)
+            syncSlotToFirestore(slot)
+        }
+        booking?.let {
+            val confirmedBooking = it.copy(status = BookingStatus.CONFIRMED)
+            syncBookingToFirestore(confirmedBooking)
+            updateMatchingWebBookingStatusInFirestore(confirmedBooking, BookingStatus.CONFIRMED)
+        }
     }
 
     suspend fun rejectBooking(bookingId: Long, dateStr: String) {
         dao.updateBookingStatus(bookingId, BookingStatus.REJECTED)
         val booking = dao.getBookingById(bookingId)
-        booking?.let { syncBookingToFirestore(it.copy(status = BookingStatus.REJECTED)) }
+        val dates = dateStr.split(",").map { it.trim() }.filter { it.isNotBlank() }
+        dates.forEach { singleDate ->
+            val existingSlot = dao.getDateSlot(singleDate)
+            if (existingSlot != null && existingSlot.status == DateStatus.REQUEST) {
+                dao.deleteDateSlot(singleDate)
+                deleteSlotFromFirestore(singleDate)
+            }
+        }
+        booking?.let {
+            val rejectedBooking = it.copy(status = BookingStatus.REJECTED)
+            syncBookingToFirestore(rejectedBooking)
+            updateMatchingWebBookingStatusInFirestore(rejectedBooking, BookingStatus.REJECTED)
+        }
     }
 
     suspend fun updateBookingDetails(
@@ -282,13 +306,16 @@ $footer
         val ctx = context ?: return
         try {
             val db = FirebaseConfig.getFirestore(ctx) ?: return
-            val studioId = getStudioId()
 
             // 1. Listen for real-time calendar slot updates from Firestore
             db.collection("studio_date_slots")
                 .addSnapshotListener { snapshot, error ->
                     if (error != null || snapshot == null) return@addSnapshotListener
                     scope.launch(Dispatchers.IO) {
+                        val currentProfile = dao.getProfileSync()
+                        if (currentProfile != null) cachedProfile = currentProfile
+                        val studioId = getStudioId()
+
                         for (doc in snapshot.documents) {
                             val docStudio = doc.getString("studioId")
                             // Filter by studioId (or unassigned/default for Rajesh Maisuriya)
@@ -327,6 +354,10 @@ $footer
                 .addSnapshotListener { snapshot, error ->
                     if (error != null || snapshot == null) return@addSnapshotListener
                     scope.launch(Dispatchers.IO) {
+                        val currentProfile = dao.getProfileSync()
+                        if (currentProfile != null) cachedProfile = currentProfile
+                        val studioId = getStudioId()
+
                         for (doc in snapshot.documents) {
                             val docStudio = doc.getString("studioId")
                             // Strictly isolate: Only receive bookings submitted for THIS studio owner!
@@ -361,6 +392,24 @@ $footer
                                     createdAt = createdAt
                                 )
                                 dao.insertBooking(booking)
+
+                                // Also ensure calendar shows yellow REQUEST for pending web requests
+                                if (status == BookingStatus.PENDING) {
+                                    dateStr.split(",").map { it.trim() }.filter { it.isNotBlank() }.forEach { singleDate ->
+                                        val existingSlot = dao.getDateSlot(singleDate)
+                                        if (existingSlot == null || existingSlot.status == DateStatus.FREE) {
+                                            dao.insertOrUpdateDateSlot(
+                                                StudioDateSlot(
+                                                    dateStr = singleDate,
+                                                    status = DateStatus.REQUEST,
+                                                    note = "Requested by $customerName"
+                                                )
+                                            )
+                                        }
+                                    }
+                                }
+                            } else if (existing.status != status && existing.status == BookingStatus.PENDING) {
+                                dao.updateBookingStatus(existing.id, status)
                             }
                         }
                     }
@@ -463,6 +512,25 @@ $footer
             db.collection("booking_requests").document(docId).set(data)
         } catch (e: Exception) {
             Log.e("StudioRepository", "Firestore booking sync error: ${e.message}")
+        }
+    }
+
+    private fun updateMatchingWebBookingStatusInFirestore(booking: BookingRequest, newStatus: BookingStatus) {
+        val ctx = context ?: return
+        try {
+            val db = FirebaseConfig.getFirestore(ctx) ?: return
+            val studioId = getStudioId()
+            db.collection("booking_requests")
+                .whereEqualTo("studioId", studioId)
+                .whereEqualTo("createdAt", booking.createdAt)
+                .get()
+                .addOnSuccessListener { snapshot ->
+                    for (doc in snapshot.documents) {
+                        doc.reference.update("status", newStatus.name)
+                    }
+                }
+        } catch (e: Exception) {
+            Log.e("StudioRepository", "Firestore web booking status update error: ${e.message}")
         }
     }
 

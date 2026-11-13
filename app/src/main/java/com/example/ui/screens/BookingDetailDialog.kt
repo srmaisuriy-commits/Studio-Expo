@@ -193,7 +193,7 @@ fun BookingDetailDialog(
                             shape = RoundedCornerShape(10.dp),
                             modifier = Modifier.weight(1f)
                         ) {
-                            Text("Confirm 🔴", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                            Text("Done / Confirm 🔴", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                         }
                     }
                 }

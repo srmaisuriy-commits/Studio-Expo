@@ -179,7 +179,7 @@ fun OwnerBookingRequestsScreen(
                                             modifier = Modifier.weight(1f),
                                             shape = RoundedCornerShape(8.dp)
                                         ) {
-                                            Text("Confirm 🔴", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                            Text("Done / Confirm 🔴", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                                         }
                                     }
                                 }

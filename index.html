@@ -688,15 +688,31 @@
     window.__STUDIO_ID__ = studioId;
     window.__FIREBASE_DB__ = db;
 
-    // Save booking request directly to Firestore with studioId isolation
-    window.__SAVE_BOOKING_REQ__ = async function(data) {
-      try {
-        data.studioId = window.__STUDIO_ID__;
-        const cleanDateStr = (data.dateStr || "date").replace(/[^a-zA-Z0-9_-]/g, "_");
-        const docId = window.__STUDIO_ID__ + "_" + cleanDateStr + "_" + (data.customerPhone || "phone") + "_" + Date.now();
-        await setDoc(doc(db, "booking_requests", docId), data);
-      } catch (err) {
-        console.error("Firestore booking submit error:", err);
+    // Save booking request directly to Firestore with studioId isolation and mark requested dates
+    window.__SAVE_BOOKING_REQ__ = async function(data, selectedDatesList) {
+      data.studioId = window.__STUDIO_ID__;
+      const cleanDateStr = (data.dateStr || "date").replace(/[^a-zA-Z0-9_-]/g, "_");
+      const docId = window.__STUDIO_ID__ + "_" + cleanDateStr + "_" + (data.customerPhone || "phone") + "_" + Date.now();
+      await setDoc(doc(db, "booking_requests", docId), data);
+
+      if (Array.isArray(selectedDatesList)) {
+        for (const isoDate of selectedDatesList) {
+          const existing = window.LIVE_DATE_SLOTS && window.LIVE_DATE_SLOTS[isoDate];
+          if (!existing || existing.status !== "BOOKED") {
+            await setDoc(doc(db, "studio_date_slots", window.__STUDIO_ID__ + "_" + isoDate), {
+              studioId: window.__STUDIO_ID__,
+              dateStr: isoDate,
+              status: "REQUEST",
+              slotType: "FULL_DAY",
+              note: "Requested by " + (data.customerName || "Customer"),
+              bookedCustomerName: "",
+              bookedCustomerPhone: "",
+              workType: data.workType || "",
+              amount: data.amount || 0,
+              updatedAt: Date.now()
+            });
+          }
+        }
       }
     };
 
@@ -908,7 +924,7 @@
       </div>
 
       <button type="button" class="btn btn-submit" id="sendBookingBtn">
-        📲 Send Booking Request on WhatsApp
+        📩 Send Booking Request / બુકિંગ રિક્વેસ્ટ મોકલો
       </button>
     </div>
 
@@ -920,13 +936,10 @@
       <div style="font-size: 48px; margin-bottom: 8px;">🎉</div>
       <h3 style="font-size: 1.3rem; font-weight: 800; margin-bottom: 6px;">Booking Request Sent!</h3>
       <p style="color: var(--text-secondary); font-size: 0.88rem; margin-bottom: 16px;">
-        તમારી તારીખની રિક્વેસ્ટ સ્ટુડિયો એક્સપોના કેલેન્ડરમાં મોકલાઈ ગઈ છે. રાજેશ મૈસૂરિયાને WhatsApp પર મોકલવા માટે નીચે ક્લિક કરો.
+        તમારી બુકિંગ રિક્વેસ્ટ સીધી સ્ટુડિયો એપના Requests પેજ પર મોકલાઈ ગઈ છે. સ્ટુડિયો ઓનર Done/Confirm કરશે એટલે તારીખ કેલેન્ડરમાં Booked થઈ જશે.
       </p>
-      <button class="btn btn-whatsapp" id="proceedWhatsAppBtn" style="width: 100%;">
-        Open WhatsApp Now
-      </button>
-      <button class="btn btn-call" id="closeModalBtn" style="width: 100%; margin-top: 8px;">
-        Close
+      <button class="btn btn-whatsapp" id="closeModalBtn" style="width: 100%;">
+        Done / બંધ કરો
       </button>
     </div>
   </div>
@@ -957,8 +970,6 @@
     // Date-wise crew mapping: isoDate -> Set of roleIds
     window.DATE_CREW_MAP = {};
 
-    let generatedWhatsAppUrl = "";
-
     const monthYearLabel = document.getElementById('monthYearLabel');
     const calendarDaysGrid = document.getElementById('calendarDaysGrid');
     const prevMonthBtn = document.getElementById('prevMonthBtn');
@@ -973,7 +984,6 @@
     const totalGrandAmountText = document.getElementById('totalGrandAmountText');
     const sendBookingBtn = document.getElementById('sendBookingBtn');
     const successModal = document.getElementById('successModal');
-    const proceedWhatsAppBtn = document.getElementById('proceedWhatsAppBtn');
     const closeModalBtn = document.getElementById('closeModalBtn');
 
     const MONTH_NAMES = [
@@ -1007,10 +1017,6 @@
       customPriceInput.addEventListener('input', updateTotalPackage);
       sendBookingBtn.addEventListener('click', handleSendBooking);
 
-      proceedWhatsAppBtn.addEventListener('click', () => {
-        if (generatedWhatsAppUrl) window.open(generatedWhatsAppUrl, '_blank');
-        successModal.classList.remove('active');
-      });
       closeModalBtn.addEventListener('click', () => successModal.classList.remove('active'));
 
       window.refreshCalendarUI = () => {
@@ -1345,51 +1351,34 @@
       const userCustom = parseFloat(customPriceInput.value);
       const finalGrandAmount = (!isNaN(userCustom) && userCustom > 0) ? userCustom : totalAutoAmount;
 
-      // Firestore submission: Creates request with status "PENDING"
-      if (window.__SAVE_BOOKING_REQ__) {
-        await window.__SAVE_BOOKING_REQ__({
-          customerName: name,
-          customerPhone: phone,
-          dateStr: sortedDates.join(", "),
-          breakdown: dayByDayBreakdown,
-          daysCount: sortedDates.length,
-          workType: dayByDayBreakdown.map(d => `Day ${d.day}: ${d.crew}`).join(" | "),
-          amount: finalGrandAmount,
-          location: location,
-          notes: notes,
-          status: "PENDING",
-          createdAt: Date.now()
-        });
+      // Firestore submission: Creates request with status "PENDING" directly in the App's Requests page
+      sendBookingBtn.disabled = true;
+      const originalBtnText = sendBookingBtn.textContent;
+      sendBookingBtn.textContent = 'Sending Request...';
+      try {
+        if (window.__SAVE_BOOKING_REQ__) {
+          await window.__SAVE_BOOKING_REQ__({
+            customerName: name,
+            customerPhone: phone,
+            dateStr: sortedDates.join(", "),
+            breakdown: dayByDayBreakdown,
+            daysCount: sortedDates.length,
+            workType: dayByDayBreakdown.map(d => `Day ${d.day}: ${d.crew}`).join(" | "),
+            amount: finalGrandAmount,
+            location: location,
+            notes: notes,
+            status: "PENDING",
+            createdAt: Date.now()
+          }, sortedDates);
+        }
+        successModal.classList.add('active');
+      } catch (err) {
+        console.error("Booking submit error:", err);
+        alert('બુકિંગ મોકલવામાં સમસ્યા આવી, કૃપા કરીને ઇન્ટરનેટ ચેક કરીને ફરી પ્રયાસ કરો.');
+      } finally {
+        sendBookingBtn.disabled = false;
+        sendBookingBtn.textContent = originalBtnText;
       }
-
-      // Format WhatsApp message with Day-by-Day Card details and Grand Total
-      let waDaysText = dayByDayBreakdown.map(d => 
-        `🗓️ *Day ${d.day} • ${d.displayDate}*\n   👥 Team: ${d.crew}\n   💵 Subtotal: ₹${d.subtotal.toLocaleString('en-IN')}`
-      ).join('\n\n');
-
-      const messageText = 
-`📸 *STUDIO EXPO - NEW CREW BOOKING INQUIRY*
-━━━━━━━━━━━━━━━━━━━━━━━━━━
-👤 *Customer Name:* ${name}
-📞 *Contact Phone:* ${phone}
-📍 *Venue / City:* ${location || "To be discussed"}
-
-📅 *DATE-WISE CREW SELECTION (${sortedDates.length} Days):*
-${waDaysText}
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━
-💰 *TOTAL PACKAGE PRICE:* ₹${finalGrandAmount.toLocaleString('en-IN')}
-📝 *Notes:* ${notes || "Standard Coverage"}
-━━━━━━━━━━━━━━━━━━━━━━━━━━
-_Sent via Studio Expo Live Booking Portal_`;
-
-      const rawPh = (window.CURRENT_STUDIO_PROFILE && (window.CURRENT_STUDIO_PROFILE.whatsapp || window.CURRENT_STUDIO_PROFILE.phone)) || "+91 XXXXX XX520";
-      const cleanOwnerPh = rawPh.replace(/[^0-9]/g, '');
-      const targetPhone = cleanOwnerPh.length >= 10 ? (cleanOwnerPh.startsWith("91") ? cleanOwnerPh : `91${cleanOwnerPh}`) : "919999999520";
-      const encodedMsg = encodeURIComponent(messageText);
-      generatedWhatsAppUrl = `https://api.whatsapp.com/send?phone=${targetPhone}&text=${encodedMsg}`;
-
-      successModal.classList.add('active');
     }
 
     window.addEventListener('DOMContentLoaded', init);

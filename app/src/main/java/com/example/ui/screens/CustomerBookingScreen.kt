@@ -684,12 +684,12 @@ private fun CustomerSuccessDialog(
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
-                    text = "Thank you $customerName! Your booking inquiry has been received by $studioName.",
+                    text = "Thank you $customerName! Your booking request has been sent directly to $studioName's Requests page in the app.",
                     fontSize = 13.sp,
                     color = TextLightPrimary
                 )
                 Text(
-                    text = "The photographer will review the request and get back to you shortly. You can also chat directly on WhatsApp for instant confirmation.",
+                    text = "Once the studio owner taps Done / Confirm on your request, your selected date(s) will be marked BOOKED in the calendar.",
                     fontSize = 12.sp,
                     color = TextLightSecondary
                 )
@@ -697,18 +697,10 @@ private fun CustomerSuccessDialog(
         },
         confirmButton = {
             Button(
-                onClick = {
-                    onWhatsApp()
-                    onDismiss()
-                },
+                onClick = onDismiss,
                 colors = ButtonDefaults.buttonColors(containerColor = StatusFreeGreen)
             ) {
-                Text("Chat on WhatsApp", color = Color.Black, fontWeight = FontWeight.Bold)
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Done", color = TextLightSecondary)
+                Text("Done", color = Color.Black, fontWeight = FontWeight.Bold)
             }
         },
         containerColor = StudioCard,
