@@ -225,7 +225,7 @@ class StudioRepository(
         val phone = profile?.whatsapp ?: profile?.phone ?: "+91 XXXXX XX520"
         val formattedPhone = if (phone.startsWith("+91")) phone else "+91 $phone"
         val studioSlug = profile?.photographerName?.trim()?.lowercase()?.replace(Regex("[^a-z0-9]+"), "_")?.trim('_')?.ifBlank { "rajesh_maisuriya" } ?: "rajesh_maisuriya"
-        val webBookingUrl = "https://ais-pre-kobo3baivxg6hgtkuscf6x-415462319358.asia-southeast1.run.app/?studio=$studioSlug"
+        val webBookingUrl = "https://srmaisuriy-commits.github.io/Studio-Expo/?studio=$studioSlug"
 
         val cameraGear = customCameraGear ?: profile?.cameraGearDetails ?: "Sony FX3 / A7 IV • DJI Drone • 4K Cinematic Video • Gimbal & Pro Lights"
         val note = customNote ?: profile?.customWhatsAppNote ?: "Latest 4K Cinematic Camera & Drone Coverage Available / नवीनतम 4K सिनेमैटिक कैमरा और ड्रोन कवरेज उपलब्ध है।"
@@ -273,7 +273,7 @@ $footer
     }
 
     fun getWebBookingUrl(): String {
-        return "https://ais-pre-kobo3baivxg6hgtkuscf6x-415462319358.asia-southeast1.run.app/?studio=${getStudioId()}"
+        return "https://srmaisuriy-commits.github.io/Studio-Expo/?studio=${getStudioId()}"
     }
 
     // --- Firebase Firestore Synchronization ---

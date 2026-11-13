@@ -280,7 +280,7 @@ fun OwnerDashboardScreen(
             item {
                 val context = LocalContext.current
                 val studioSlug = profile?.photographerName?.trim()?.lowercase()?.replace(Regex("[^a-z0-9]+"), "_")?.trim('_')?.ifBlank { "rajesh_maisuriya" } ?: "rajesh_maisuriya"
-                val liveWebUrl = "https://ais-pre-kobo3baivxg6hgtkuscf6x-415462319358.asia-southeast1.run.app/?studio=$studioSlug"
+                val liveWebUrl = "https://srmaisuriy-commits.github.io/Studio-Expo/?studio=$studioSlug"
 
                 Card(
                     modifier = Modifier.fillMaxWidth().testTag("live_web_link_card"),
