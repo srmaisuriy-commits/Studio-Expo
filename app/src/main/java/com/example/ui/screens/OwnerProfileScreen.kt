@@ -393,6 +393,7 @@ fun OwnerProfileScreen(
                         label = { Text("Camera Gear / कैमरा और उपकरण") },
                         leadingIcon = { Icon(Icons.Default.CameraAlt, contentDescription = null, tint = StudioAmber) },
                         modifier = Modifier.fillMaxWidth().testTag("profile_camera_gear"),
+                        minLines = 4,
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = StudioAmber,
                             cursorColor = StudioAmber
@@ -422,7 +423,7 @@ fun OwnerProfileScreen(
                     OutlinedTextField(
                         value = phone,
                         onValueChange = { phone = it },
-                        label = { Text("Contact Phone / સંપર્ક ફોન નંબર") },
+                        label = { Text("Contact Phone / संपर्क फोन नंबर") },
                         placeholder = { Text("+91 XXXXX XX520") },
                         leadingIcon = { Icon(Icons.Default.Phone, contentDescription = null, tint = StudioAmber) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
@@ -437,7 +438,7 @@ fun OwnerProfileScreen(
                     OutlinedTextField(
                         value = whatsapp,
                         onValueChange = { whatsapp = it },
-                        label = { Text("WhatsApp Number / વ્હોટ્સએપ નંબર") },
+                        label = { Text("WhatsApp Number / व्हाट्सएप नंबर") },
                         placeholder = { Text("+91 XXXXX XX520") },
                         leadingIcon = { Icon(Icons.Default.Phone, contentDescription = null, tint = StudioAmber) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
@@ -452,10 +453,10 @@ fun OwnerProfileScreen(
                     OutlinedTextField(
                         value = customWhatsAppNote,
                         onValueChange = { customWhatsAppNote = it },
-                        label = { Text("Default WhatsApp Broadcast Message") },
+                        label = { Text("Default WhatsApp Broadcast Message / डिफ़ॉल्ट व्हाट्सएप ब्रॉडकास्ट संदेश") },
                         leadingIcon = { Icon(Icons.Default.Notes, contentDescription = null, tint = StudioAmber) },
                         modifier = Modifier.fillMaxWidth().testTag("profile_whatsapp_note"),
-                        minLines = 2,
+                        minLines = 3,
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = StudioAmber,
                             cursorColor = StudioAmber

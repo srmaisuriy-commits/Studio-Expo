@@ -188,7 +188,8 @@ fun MainScreen(
                                     bookings = allBookings,
                                     onConfirmBooking = { booking -> viewModel.confirmBooking(booking) },
                                     onRejectBooking = { booking -> viewModel.rejectBooking(booking) },
-                                    onOpenBookingDetail = { booking -> viewModel.openBookingDetail(booking) }
+                                    onOpenBookingDetail = { booking -> viewModel.openBookingDetail(booking) },
+                                    onDeleteConfirmedBooking = { booking -> viewModel.deleteConfirmedBooking(booking) }
                                 )
                             }
 
@@ -257,7 +258,8 @@ fun MainScreen(
             booking = booking,
             onDismiss = { viewModel.closeBookingDetail() },
             onConfirm = { b -> viewModel.confirmBooking(b) },
-            onReject = { b -> viewModel.rejectBooking(b) }
+            onReject = { b -> viewModel.rejectBooking(b) },
+            onDeleteConfirmed = { b -> viewModel.deleteConfirmedBooking(b) }
         )
     }
 

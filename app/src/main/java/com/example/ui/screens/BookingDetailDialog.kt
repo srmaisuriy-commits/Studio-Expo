@@ -16,6 +16,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Message
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -48,7 +49,8 @@ fun BookingDetailDialog(
     booking: BookingRequest,
     onDismiss: () -> Unit,
     onConfirm: (BookingRequest) -> Unit,
-    onReject: (BookingRequest) -> Unit
+    onReject: (BookingRequest) -> Unit,
+    onDeleteConfirmed: ((BookingRequest) -> Unit)? = null
 ) {
     val context = LocalContext.current
 
@@ -195,6 +197,16 @@ fun BookingDetailDialog(
                         ) {
                             Text("Done / Confirm 🔴", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                         }
+                    }
+                } else if (booking.status == BookingStatus.CONFIRMED && onDeleteConfirmed != null) {
+                    OutlinedButton(
+                        onClick = { onDeleteConfirmed(booking) },
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(Icons.Default.Delete, contentDescription = null, tint = StatusBookedRed, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Delete Booking / बुकिंग हटाएं", color = StatusBookedRed, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                     }
                 }
             }

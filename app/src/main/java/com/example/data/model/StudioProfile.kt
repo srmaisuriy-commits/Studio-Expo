@@ -14,10 +14,10 @@ data class StudioProfile(
     val ownerPin: String = "1234",
     val bio: String = "Professional Wedding, Pre-Wedding & Cinematic Fashion Photography",
     val instagramHandle: String = "@studioexpo.official",
-    val cameraGearDetails: String = "Sony FX3 / A7 IV • DJI Drone • 4K Cinematic Video • Gimbal & Pro Lights",
-    val customWhatsAppNote: String = "Latest 4K Cinematic Camera & Drone Coverage Available. Special packages available! / नवीनतम 4K सिनेमैटिक कैमरा और ड्रोन कवरेज उपलब्ध है।",
-    val customHeaderGreeting: String = "Hello! Here are our available (FREE) dates for upcoming wedding & events / नमस्ते! आगामी शादी और इवेंट्स के लिए हमारी उपलब्ध (FREE) तारीखें:",
-    val customFooterNote: String = "Reserve your special date today! Contact us on WhatsApp for bookings & details / अपनी तारीख आज ही बुक करें!",
+    val cameraGearDetails: String = DEFAULT_CAMERA_GEAR,
+    val customWhatsAppNote: String = DEFAULT_WHATSAPP_NOTE,
+    val customHeaderGreeting: String = DEFAULT_HEADER_GREETING,
+    val customFooterNote: String = DEFAULT_FOOTER_NOTE,
     val perDayRate: Double = 25000.0,
     val rateTraditionalPhoto: Double = 10000.0,
     val rateTraditionalVideo: Double = 12000.0,
@@ -26,4 +26,28 @@ data class StudioProfile(
     val rateCinematographer: Double = 25000.0,
     val rateDronePilot: Double = 12000.0,
     val rateSupportingCrew: Double = 5000.0
-)
+) {
+    companion object {
+        const val DEFAULT_CAMERA_GEAR =
+            "Canon EOS R5 - Cinematographer\n" +
+            "Canon Ultrasonic 85 MM - EF/1.8\n" +
+            "Canon 50 MM - RF F/1.8\n" +
+            "Sigma 35 MM - RF F/1.4\n" +
+            "Canon 16 MM - RF F/2.8\n" +
+            "Ronin RS4 GIMBLE\n" +
+            "Godox LC500R Light\n" +
+            "Zhiyun Cinepeer CX100 Light"
+
+        const val DEFAULT_WHATSAPP_NOTE =
+            "Wedding - 2025 - 2026\n" +
+            "Cinematic Wedding & Event Shoot Bookings Open! Check my free dates & book directly on the live calendar link below.\n" +
+            "वेडिंग 2025 - 2026 बुकिंग शुरू है! नीचे दिए गए लाइव कैलेंडर लिंक पर फ्री तारीखें देखें और सीधे बुक करें।"
+
+        const val DEFAULT_HEADER_GREETING =
+            "Wedding - 2025 - 2026\n" +
+            "Hello! Here are my available (FREE) dates / नमस्ते! मेरी उपलब्ध (FREE) तारीखें:"
+
+        const val DEFAULT_FOOTER_NOTE =
+            "Book your date directly using the Live Calendar link below / नीचे दिए गए लाइव कैलेंडर लिंक से अपनी तारीख बुक करें!"
+    }
+}

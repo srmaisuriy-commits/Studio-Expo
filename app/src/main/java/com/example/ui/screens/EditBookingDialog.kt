@@ -95,41 +95,70 @@ fun EditBookingDialog(
     }
     var activeDates by remember { mutableStateOf(group.dates) }
 
-    // Date-crew map: initialize from existing
+    // Date-crew map: initialize from existing, normalized to clean role names
     var dateSpecificCrewMap by remember {
         val initialMap = group.dates.associateWith { d ->
-            group.dateCrewMap[d] ?: group.workTypeSummary
+            val raw = group.dateCrewMap[d] ?: group.workTypeSummary
+            val parsed = WorkTypeCatalog.extractRoleNamesFromWorkType(raw, profile)
+            if (parsed.isNotEmpty()) WorkTypeCatalog.formatRolesSummary(parsed) else catalogTypes.first().englishName
         }.toMutableMap()
         mutableStateOf(initialMap)
     }
 
     // Whether multi-dates have different crew per date
     var differentCrewPerDate by remember {
-        mutableStateOf(activeDates.size > 1 && (group.dateCrewMap.size > 1 || group.workTypeSummary.contains("|")))
+        val distinctCrews = group.dateCrewMap.values.map {
+            WorkTypeCatalog.formatRolesSummary(WorkTypeCatalog.extractRoleNamesFromWorkType(it, profile))
+        }.distinct()
+        mutableStateOf(activeDates.size > 1 && (distinctCrews.size > 1 || group.workTypeSummary.contains("|")))
     }
 
     var selectedGlobalCrew by remember {
-        mutableStateOf(group.workTypeSummary.takeIf { it.isNotBlank() } ?: catalogTypes.first().englishName)
+        val firstRaw = group.dateCrewMap.values.firstOrNull() ?: group.workTypeSummary
+        val parsed = WorkTypeCatalog.extractRoleNamesFromWorkType(firstRaw, profile)
+        mutableStateOf(
+            if (parsed.isNotEmpty()) WorkTypeCatalog.formatRolesSummary(parsed)
+            else catalogTypes.first().englishName
+        )
     }
 
-    var customAmount by remember { mutableDoubleStateOf(group.totalAmount) }
-    var amountText by remember { mutableStateOf(group.totalAmount.toLong().toString()) }
-
-    fun recalculateAmount(dates: List<String>, isDateWise: Boolean, crewMap: Map<String, String>, globalCrew: String) {
-        if (dates.isEmpty()) {
-            customAmount = 0.0
-            amountText = "0"
-            return
-        }
-        val calculatedSum = if (dates.size > 1 && isDateWise) {
+    fun computeAmount(dates: List<String>, isDateWise: Boolean, crewMap: Map<String, String>, globalCrew: String): Double {
+        if (dates.isEmpty()) return 0.0
+        return if (dates.size > 1 && isDateWise) {
             dates.sumOf { d ->
-                val role = crewMap[d] ?: globalCrew
-                catalogTypes.find { it.englishName == role }?.defaultEstimate ?: 10000.0
+                val roleStr = crewMap[d] ?: globalCrew
+                val est = WorkTypeCatalog.calculateEstimateForDate(roleStr, profile)
+                if (est > 0.0) est else catalogTypes.first().defaultEstimate
             }
         } else {
-            val role = catalogTypes.find { it.englishName == globalCrew } ?: catalogTypes.first()
-            dates.size * role.defaultEstimate
+            val est = WorkTypeCatalog.calculateEstimateForDate(globalCrew, profile)
+            val perDay = if (est > 0.0) est else catalogTypes.first().defaultEstimate
+            dates.size * perDay
         }
+    }
+
+    val initialAmount = remember(group) {
+        if (group.totalAmount > 0.0) group.totalAmount
+        else computeAmount(activeDates, differentCrewPerDate, dateSpecificCrewMap, selectedGlobalCrew)
+    }
+    var customAmount by remember { mutableDoubleStateOf(initialAmount) }
+    var amountText by remember { mutableStateOf(initialAmount.toLong().toString()) }
+
+    fun toggleRoleInString(current: String, roleName: String): String {
+        val currentSet = WorkTypeCatalog.extractRoleNamesFromWorkType(current, profile).toMutableSet()
+        if (currentSet.isEmpty()) currentSet.add(catalogTypes.first().englishName)
+        if (currentSet.contains(roleName)) {
+            if (currentSet.size > 1) {
+                currentSet.remove(roleName)
+            }
+        } else {
+            currentSet.add(roleName)
+        }
+        return WorkTypeCatalog.formatRolesSummary(currentSet)
+    }
+
+    fun recalculateAmount(dates: List<String>, isDateWise: Boolean, crewMap: Map<String, String>, globalCrew: String) {
+        val calculatedSum = computeAmount(dates, isDateWise, crewMap, globalCrew)
         customAmount = calculatedSum
         amountText = calculatedSum.toLong().toString()
     }
@@ -422,14 +451,15 @@ fun EditBookingDialog(
                                             horizontalArrangement = Arrangement.spacedBy(5.dp),
                                             verticalArrangement = Arrangement.spacedBy(5.dp)
                                         ) {
+                                            val selectedRolesForDate = WorkTypeCatalog.extractRoleNamesFromWorkType(selectedForThisDate, profile)
                                             catalogTypes.forEach { workType ->
-                                                val isSelected = selectedForThisDate.contains(workType.englishName, ignoreCase = true)
+                                                val isSelected = selectedRolesForDate.contains(workType.englishName)
                                                 Surface(
                                                     shape = RoundedCornerShape(8.dp),
                                                     color = if (isSelected) StudioAmber else StudioCard,
                                                     modifier = Modifier.clickable {
                                                         val updatedMap = dateSpecificCrewMap.toMutableMap()
-                                                        updatedMap[dateIso] = workType.englishName
+                                                        updatedMap[dateIso] = toggleRoleInString(selectedForThisDate, workType.englishName)
                                                         dateSpecificCrewMap = updatedMap
                                                         recalculateAmount(activeDates, differentCrewPerDate, updatedMap, selectedGlobalCrew)
                                                     }
@@ -449,20 +479,22 @@ fun EditBookingDialog(
                             }
                         }
                     } else {
-                        // Single / Same Crew Selection Chips across all 7 types
+                        // Single / Same Crew Selection Chips across all 7 types (supports multi-crew toggle)
                         FlowRow(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(6.dp),
                             verticalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
+                            val selectedGlobalRoles = WorkTypeCatalog.extractRoleNamesFromWorkType(selectedGlobalCrew, profile)
                             catalogTypes.forEach { workType ->
-                                val isSelected = selectedGlobalCrew.contains(workType.englishName, ignoreCase = true)
+                                val isSelected = selectedGlobalRoles.contains(workType.englishName)
                                 Surface(
                                     shape = RoundedCornerShape(8.dp),
                                     color = if (isSelected) StudioAmber else StudioSurface,
                                     modifier = Modifier.clickable {
-                                        selectedGlobalCrew = workType.englishName
-                                        recalculateAmount(activeDates, differentCrewPerDate, dateSpecificCrewMap, workType.englishName)
+                                        val nextCrew = toggleRoleInString(selectedGlobalCrew, workType.englishName)
+                                        selectedGlobalCrew = nextCrew
+                                        recalculateAmount(activeDates, differentCrewPerDate, dateSpecificCrewMap, nextCrew)
                                     }
                                 ) {
                                     Text(

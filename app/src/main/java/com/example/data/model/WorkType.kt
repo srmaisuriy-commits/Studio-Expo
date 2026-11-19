@@ -101,4 +101,54 @@ object WorkTypeCatalog {
             it.displayName.equals(nameOrId, ignoreCase = true)
         }
     }
+
+    /**
+     * Parses one or more crew roles from a workType string (e.g. "Traditional Photographer + Cinematographer",
+     * "20 Nov 2026: 📸 Semi-Candid Photographer, 🛸 Drone Pilot", etc.) without false substring matches
+     * such as matching "Candid Photographer" inside "Semi-Candid Photographer".
+     */
+    fun parseRolesFromWorkType(workTypeStr: String, profile: StudioProfile? = null): List<WorkType> {
+        if (workTypeStr.isBlank()) return emptyList()
+        val types = getTypesForProfile(profile)
+        // Strip leading date/day prefix like "2026-11-20:" or "20 Nov 2026:" or "Day 1:"
+        val withoutPrefix = workTypeStr.replace(Regex("^[^:]{1,30}:\\s*"), "")
+        var remaining = withoutPrefix.lowercase()
+        val matched = mutableListOf<WorkType>()
+
+        // Match longest englishName first so "Semi-Candid Photographer" matches before "Candid Photographer"
+        val sortedByLength = types.sortedByDescending { it.englishName.length }
+        for (type in sortedByLength) {
+            val target = type.englishName.lowercase()
+            if (remaining.contains(target)) {
+                matched.add(type)
+                remaining = remaining.replace(target, " ")
+            } else {
+                val idToken = type.id.lowercase()
+                if (remaining.contains(idToken)) {
+                    matched.add(type)
+                    remaining = remaining.replace(idToken, " ")
+                }
+            }
+        }
+
+        // Preserve catalog order
+        val matchedIds = matched.map { it.id }.toSet()
+        return types.filter { matchedIds.contains(it.id) }
+    }
+
+    fun extractRoleNamesFromWorkType(workTypeStr: String, profile: StudioProfile? = null): Set<String> {
+        return parseRolesFromWorkType(workTypeStr, profile).map { it.englishName }.toSet()
+    }
+
+    fun calculateEstimateForDate(workTypeStr: String, profile: StudioProfile? = null): Double {
+        val roles = parseRolesFromWorkType(workTypeStr, profile)
+        return if (roles.isNotEmpty()) roles.sumOf { it.defaultEstimate } else 0.0
+    }
+
+    fun formatRolesSummary(roles: Collection<String>): String {
+        if (roles.isEmpty()) return allTypes.first().englishName
+        val roleSet = roles.toSet()
+        val ordered = allTypes.filter { roleSet.contains(it.englishName) }.map { it.englishName }
+        return if (ordered.isNotEmpty()) ordered.joinToString(" + ") else roles.joinToString(" + ")
+    }
 }

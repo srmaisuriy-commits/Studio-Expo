@@ -71,6 +71,9 @@ interface StudioDao {
     @Query("DELETE FROM booking_requests WHERE dateStr = :dateStr")
     suspend fun deleteBookingByDate(dateStr: String)
 
+    @Query("DELETE FROM booking_requests WHERE dateStr = :dateStr AND status = 'CONFIRMED'")
+    suspend fun deleteConfirmedBookingsByDate(dateStr: String)
+
     @Query("SELECT * FROM studio_date_slots")
     suspend fun getAllDateSlotsSync(): List<StudioDateSlot>
 

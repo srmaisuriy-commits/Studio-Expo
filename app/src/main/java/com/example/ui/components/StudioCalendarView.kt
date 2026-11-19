@@ -28,6 +28,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -35,6 +36,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.local.CalendarDay
@@ -72,6 +74,16 @@ fun StudioCalendarView(
     val slotMap = dateSlots.associateBy { it.dateStr }
     val pendingByDate = bookings.filter { it.status == BookingStatus.PENDING }
         .groupBy { it.dateStr }
+    val confirmedNameByDate = remember(bookings) {
+        val map = mutableMapOf<String, String>()
+        bookings.filter { it.status == BookingStatus.CONFIRMED && it.customerName.isNotBlank() }
+            .forEach { b ->
+                b.dateStr.split(",").map { it.trim() }.filter { it.isNotBlank() }.forEach { d ->
+                    map.putIfAbsent(d, b.customerName)
+                }
+            }
+        map
+    }
 
     var freeCount = 0
     var bookedCount = 0
@@ -191,7 +203,7 @@ fun StudioCalendarView(
                 ) {
                     for (day in row) {
                         if (!day.isCurrentMonth || day.day == 0) {
-                            Box(modifier = Modifier.weight(1f).aspectRatio(1f))
+                            Box(modifier = Modifier.weight(1f).aspectRatio(0.84f))
                         } else {
                             val slot = slotMap[day.dateIso]
                             val isFree = slot?.status == DateStatus.FREE
@@ -199,6 +211,8 @@ fun StudioCalendarView(
                             val pendingList = pendingByDate[day.dateIso]
                             val pendingCount = pendingList?.size ?: 0
                             val isRequest = pendingCount > 0 || slot?.status == DateStatus.REQUEST
+                            val bookedCustomerName = slot?.bookedCustomerName?.takeIf { it.isNotBlank() }
+                                ?: confirmedNameByDate[day.dateIso]
 
                             val isSelected = if (isOwnerMode && selectedDates.isNotEmpty()) {
                                 selectedDates.contains(day.dateIso)
@@ -210,6 +224,7 @@ fun StudioCalendarView(
                                 CalendarDayCell(
                                     day = day,
                                     slot = slot,
+                                    bookedCustomerName = bookedCustomerName,
                                     isFree = isFree,
                                     isBooked = isBooked,
                                     isRequest = isRequest,
@@ -226,7 +241,7 @@ fun StudioCalendarView(
                     // Fill remaining empty cells in row
                     if (row.size < 7) {
                         for (i in row.size until 7) {
-                            Box(modifier = Modifier.weight(1f).aspectRatio(1f))
+                            Box(modifier = Modifier.weight(1f).aspectRatio(0.84f))
                         }
                     }
                 }
@@ -269,6 +284,7 @@ private fun CountingItem(
 private fun CalendarDayCell(
     day: CalendarDay,
     slot: StudioDateSlot?,
+    bookedCustomerName: String?,
     isFree: Boolean,
     isBooked: Boolean,
     isRequest: Boolean,
@@ -295,7 +311,7 @@ private fun CalendarDayCell(
 
     Box(
         modifier = Modifier
-            .aspectRatio(1f)
+            .aspectRatio(0.84f)
             .padding(2.dp)
             .clip(RoundedCornerShape(8.dp))
             .background(backgroundColor)
@@ -312,11 +328,13 @@ private fun CalendarDayCell(
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+            verticalArrangement = Arrangement.Center,
+            modifier = Modifier.padding(horizontal = 2.dp)
         ) {
             Text(
                 text = day.day.toString(),
-                fontSize = 13.sp,
+                fontSize = 12.sp,
+                lineHeight = 13.sp,
                 fontWeight = if (isSelected || isFree || isBooked || isRequest) FontWeight.Bold else FontWeight.Normal,
                 color = when {
                     isBooked -> StatusBookedRed
@@ -327,12 +345,26 @@ private fun CalendarDayCell(
                 }
             )
 
+            if (isBooked && isOwnerMode && !bookedCustomerName.isNullOrBlank()) {
+                Text(
+                    text = bookedCustomerName,
+                    fontSize = 8.sp,
+                    lineHeight = 9.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = StatusBookedRed,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    textAlign = TextAlign.Center
+                )
+            }
+
             // Status indicator dot or badge
             when {
                 isBooked -> {
+                    Spacer(modifier = Modifier.height(1.dp))
                     Box(
                         modifier = Modifier
-                            .size(6.dp)
+                            .size(5.dp)
                             .clip(CircleShape)
                             .background(StatusBookedRed)
                     )

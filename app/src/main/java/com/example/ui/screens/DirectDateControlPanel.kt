@@ -108,16 +108,31 @@ fun DirectDateControlPanel(
     var customAmount by remember { mutableDoubleStateOf(0.0) }
     var amountText by remember { mutableStateOf("0") }
 
+    fun toggleRoleInString(current: String, roleName: String): String {
+        val currentSet = WorkTypeCatalog.extractRoleNamesFromWorkType(current, profile).toMutableSet()
+        if (currentSet.isEmpty()) currentSet.add(catalogTypes.first().englishName)
+        if (currentSet.contains(roleName)) {
+            if (currentSet.size > 1) {
+                currentSet.remove(roleName)
+            }
+        } else {
+            currentSet.add(roleName)
+        }
+        return WorkTypeCatalog.formatRolesSummary(currentSet)
+    }
+
     // Recalculate amount helper
     fun recalculate(dates: List<String>, isDateWise: Boolean, crewMap: Map<String, String>, globalCrew: String) {
         val calculated = if (dates.size > 1 && isDateWise) {
             dates.sumOf { d ->
-                val role = crewMap[d] ?: globalCrew
-                catalogTypes.find { it.englishName == role }?.defaultEstimate ?: 10000.0
+                val roleStr = crewMap[d] ?: globalCrew
+                val est = WorkTypeCatalog.calculateEstimateForDate(roleStr, profile)
+                if (est > 0.0) est else catalogTypes.first().defaultEstimate
             }
         } else {
-            val role = catalogTypes.find { it.englishName == globalCrew } ?: catalogTypes.first()
-            dates.size * role.defaultEstimate
+            val est = WorkTypeCatalog.calculateEstimateForDate(globalCrew, profile)
+            val perDay = if (est > 0.0) est else catalogTypes.first().defaultEstimate
+            dates.size * perDay
         }
         customAmount = calculated
         amountText = calculated.toLong().toString()
@@ -387,13 +402,14 @@ fun DirectDateControlPanel(
                                             verticalArrangement = Arrangement.spacedBy(6.dp)
                                         ) {
                                             for (workType in catalogTypes) {
-                                                val isSelected = selectedForThisDate == workType.englishName
+                                                val selectedRoles = WorkTypeCatalog.extractRoleNamesFromWorkType(selectedForThisDate, profile)
+                                                val isSelected = selectedRoles.contains(workType.englishName)
                                                 Surface(
                                                     shape = RoundedCornerShape(8.dp),
                                                     color = if (isSelected) StudioAmber else StudioSurface,
                                                     modifier = Modifier.clickable {
                                                         val updatedMap = dateSpecificCrewMap.toMutableMap()
-                                                        updatedMap[dateStr] = workType.englishName
+                                                        updatedMap[dateStr] = toggleRoleInString(selectedForThisDate, workType.englishName)
                                                         dateSpecificCrewMap = updatedMap
                                                         recalculate(sortedDates, differentCrewPerDate, updatedMap, selectedGlobalCrew)
                                                     }
@@ -413,20 +429,22 @@ fun DirectDateControlPanel(
                             }
                         }
                     } else {
-                        // Same Crew Selection Chips across all 7 types
+                        // Same Crew Selection Chips across all 7 types (supports multi-crew selection)
                         FlowRow(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(6.dp),
                             verticalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
+                            val selectedGlobalRoles = WorkTypeCatalog.extractRoleNamesFromWorkType(selectedGlobalCrew, profile)
                             for (workType in catalogTypes) {
-                                val isSelected = selectedGlobalCrew == workType.englishName || selectedGlobalCrew == workType.displayName
+                                val isSelected = selectedGlobalRoles.contains(workType.englishName)
                                 Surface(
                                     shape = RoundedCornerShape(8.dp),
                                     color = if (isSelected) StudioAmber else StudioCard,
                                     modifier = Modifier.clickable {
-                                        selectedGlobalCrew = workType.englishName
-                                        recalculate(sortedDates, differentCrewPerDate, dateSpecificCrewMap, workType.englishName)
+                                        val nextCrew = toggleRoleInString(selectedGlobalCrew, workType.englishName)
+                                        selectedGlobalCrew = nextCrew
+                                        recalculate(sortedDates, differentCrewPerDate, dateSpecificCrewMap, nextCrew)
                                     }
                                 ) {
                                     Text(
@@ -461,7 +479,7 @@ fun DirectDateControlPanel(
                     OutlinedTextField(
                         value = customerPhone,
                         onValueChange = { customerPhone = it },
-                        label = { Text("Customer Mobile / મોબાઈલ નંબર") },
+                        label = { Text("Customer Mobile / मोबाइल नंबर") },
                         placeholder = { Text("+91 XXXXX XX520") },
                         leadingIcon = { Icon(Icons.Default.Phone, contentDescription = null, tint = StudioAmber) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),

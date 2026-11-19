@@ -11,6 +11,7 @@ import com.example.data.model.DateStatus
 import com.example.data.model.SlotType
 import com.example.data.model.StudioDateSlot
 import com.example.data.model.StudioProfile
+import com.example.data.model.WorkTypeCatalog
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -138,21 +139,39 @@ class StudioRepository(
     suspend fun confirmBooking(bookingId: Long, dateStr: String) {
         dao.updateBookingStatus(bookingId, BookingStatus.CONFIRMED)
         val booking = dao.getBookingById(bookingId)
+        val profile = getProfileSync() ?: cachedProfile
         val dates = dateStr.split(",").map { it.trim() }.filter { it.isNotBlank() }.ifEmpty { listOf(dateStr) }
-        val perDateAmount = if (dates.size > 1 && (booking?.requestedAmount ?: 0.0) > 0.0) {
-            (booking?.requestedAmount ?: 0.0) / dates.size
-        } else {
-            booking?.requestedAmount ?: 0.0
+
+        // Extract date-specific workType if workType is multi-date formatted ("date1: crew1 | date2: crew2")
+        val workParts = (booking?.workType ?: "").split("|").map { it.trim() }.filter { it.isNotBlank() }
+        val perDateWorks = dates.mapIndexed { idx, singleDate ->
+            val displayFull = DateUtils.formatForDisplay(singleDate)
+            val displayShort = displayFull.split(" ").take(2).joinToString(" ")
+            val matchedPart = workParts.firstOrNull { part ->
+                part.contains(singleDate) || part.contains(displayFull) || (displayShort.isNotBlank() && part.contains(displayShort))
+            } ?: workParts.getOrNull(idx)
+            val rawWork = matchedPart?.replace(Regex("^[^:]{1,30}:\\s*"), "")?.trim()
+                ?: booking?.workType?.takeIf { it.isNotBlank() }
+                ?: "Booked"
+            val parsedNames = WorkTypeCatalog.extractRoleNamesFromWorkType(rawWork, profile)
+            if (parsedNames.isNotEmpty()) WorkTypeCatalog.formatRolesSummary(parsedNames) else rawWork
         }
-        dates.forEach { singleDate ->
+
+        val perDateAmounts = allocateAmountsAcrossDates(
+            workTypes = perDateWorks,
+            totalAmount = booking?.requestedAmount ?: 0.0,
+            profile = profile
+        )
+
+        dates.forEachIndexed { idx, singleDate ->
             val slot = StudioDateSlot(
                 dateStr = singleDate,
                 status = DateStatus.BOOKED,
-                note = booking?.workType ?: "Booked",
+                note = perDateWorks[idx],
                 bookedCustomerName = booking?.customerName ?: "",
                 bookedCustomerPhone = booking?.customerPhone ?: "",
-                workType = booking?.workType ?: "",
-                amount = perDateAmount
+                workType = perDateWorks[idx],
+                amount = perDateAmounts[idx]
             )
             dao.insertOrUpdateDateSlot(slot)
             syncSlotToFirestore(slot)
@@ -182,6 +201,20 @@ class StudioRepository(
         }
     }
 
+    suspend fun deleteConfirmedBooking(booking: BookingRequest) {
+        val dates = booking.dateStr.split(",").map { it.trim() }.filter { it.isNotBlank() }
+            .ifEmpty { listOf(booking.dateStr) }
+        dao.deleteBooking(booking.id)
+        deleteBookingFromFirestore(booking)
+
+        dates.forEach { singleDate ->
+            dao.deleteDateSlot(singleDate)
+            dao.deleteConfirmedBookingsByDate(singleDate)
+            deleteSlotFromFirestore(singleDate)
+            deleteConfirmedBookingsByDateFromFirestore(singleDate)
+        }
+    }
+
     suspend fun updateBookingDetails(
         originalDates: List<String>,
         newDates: List<String>,
@@ -191,17 +224,30 @@ class StudioRepository(
         dateCrewMap: Map<String, String>,
         totalAmount: Double
     ) {
+        val profile = getProfileSync() ?: cachedProfile
+        val allAffectedDates = (originalDates + newDates).distinct()
+        allAffectedDates.forEach { d ->
+            dao.deleteConfirmedBookingsByDate(d)
+        }
         val removedDates = originalDates.filterNot { newDates.contains(it) }
         removedDates.forEach { removedDate ->
             dao.deleteDateSlot(removedDate)
-            dao.deleteBookingByDate(removedDate)
             deleteSlotFromFirestore(removedDate)
+            deleteConfirmedBookingsByDateFromFirestore(removedDate)
         }
 
         if (newDates.isNotEmpty()) {
-            val perDateAmount = totalAmount / newDates.size
-            newDates.forEach { dateStr ->
-                val dateWorkType = dateCrewMap[dateStr]?.takeIf { it.isNotBlank() } ?: workTypeSummary
+            val perDateWorks = newDates.map { dateStr ->
+                dateCrewMap[dateStr]?.takeIf { it.isNotBlank() } ?: workTypeSummary
+            }
+            val perDateAmounts = allocateAmountsAcrossDates(
+                workTypes = perDateWorks,
+                totalAmount = totalAmount,
+                profile = profile
+            )
+            newDates.forEachIndexed { idx, dateStr ->
+                val dateWorkType = perDateWorks[idx]
+                val dateAmount = perDateAmounts[idx]
                 val slot = StudioDateSlot(
                     dateStr = dateStr,
                     status = DateStatus.BOOKED,
@@ -209,7 +255,7 @@ class StudioRepository(
                     bookedCustomerName = customerName,
                     bookedCustomerPhone = customerPhone,
                     workType = dateWorkType,
-                    amount = perDateAmount
+                    amount = dateAmount
                 )
                 dao.insertOrUpdateDateSlot(slot)
                 syncSlotToFirestore(slot)
@@ -219,7 +265,7 @@ class StudioRepository(
                     customerName = customerName,
                     customerPhone = customerPhone,
                     workType = dateWorkType,
-                    amount = perDateAmount,
+                    amount = dateAmount,
                     status = BookingStatus.CONFIRMED
                 )
                 val id = dao.insertBooking(booking)
@@ -231,9 +277,32 @@ class StudioRepository(
     suspend fun cancelBookingForDates(dates: List<String>) {
         dates.forEach { dateStr ->
             dao.deleteDateSlot(dateStr)
-            dao.deleteBookingByDate(dateStr)
+            dao.deleteConfirmedBookingsByDate(dateStr)
             deleteSlotFromFirestore(dateStr)
+            deleteConfirmedBookingsByDateFromFirestore(dateStr)
         }
+    }
+
+    fun allocateAmountsAcrossDates(
+        workTypes: List<String>,
+        totalAmount: Double,
+        profile: StudioProfile?
+    ): List<Double> {
+        if (workTypes.isEmpty()) return emptyList()
+        val estimates = workTypes.map { WorkTypeCatalog.calculateEstimateForDate(it, profile) }
+        val sumEstimates = estimates.sum()
+        if (totalAmount <= 0.0) {
+            return estimates
+        }
+        if (sumEstimates > 0.0) {
+            // Proportional allocation preserves exact per-date crew rates when totalAmount == sumEstimates,
+            // and scales cleanly if the owner entered a custom total.
+            return estimates.map { est ->
+                kotlin.math.round((est / sumEstimates) * totalAmount)
+            }
+        }
+        val evenShare = totalAmount / workTypes.size
+        return List(workTypes.size) { evenShare }
     }
 
     fun generateWhatsAppShareMessage(
@@ -251,16 +320,20 @@ class StudioRepository(
         val studioSlug = profile?.photographerName?.trim()?.lowercase()?.replace(Regex("[^a-z0-9]+"), "_")?.trim('_')?.ifBlank { "rajesh_maisuriya" } ?: "rajesh_maisuriya"
         val webBookingUrl = "https://srmaisuriy-commits.github.io/Studio-Expo/?studio=$studioSlug"
 
-        val cameraGear = customCameraGear ?: profile?.cameraGearDetails ?: "Sony FX3 / A7 IV • DJI Drone • 4K Cinematic Video • Gimbal & Pro Lights"
-        val note = customNote ?: profile?.customWhatsAppNote ?: "Latest 4K Cinematic Camera & Drone Coverage Available / नवीनतम 4K सिनेमैटिक कैमरा और ड्रोन कवरेज उपलब्ध है।"
-        val greeting = customGreeting ?: profile?.customHeaderGreeting ?: "Hello! Here are our available (FREE) dates for upcoming shoots & events / नमस्ते! आगामी शूट और इवेंट्स के लिए हमारी उपलब्ध (FREE) तारीखें:"
-        val footer = customFooter ?: profile?.customFooterNote ?: "Reserve your special date today! Contact us on WhatsApp for bookings & details / अपनी तारीख आज ही बुक करें!"
+        val cameraGear = (customCameraGear ?: profile?.cameraGearDetails)?.takeIf { it.isNotBlank() }
+            ?: StudioProfile.DEFAULT_CAMERA_GEAR
+        val note = (customNote ?: profile?.customWhatsAppNote)?.takeIf { it.isNotBlank() }
+            ?: StudioProfile.DEFAULT_WHATSAPP_NOTE
+        val greeting = (customGreeting ?: profile?.customHeaderGreeting)?.takeIf { it.isNotBlank() }
+            ?: StudioProfile.DEFAULT_HEADER_GREETING
+        val footer = (customFooter ?: profile?.customFooterNote)?.takeIf { it.isNotBlank() }
+            ?: StudioProfile.DEFAULT_FOOTER_NOTE
 
         val freeSlots = dateSlots.filter { it.status == DateStatus.FREE }
         val sortedFreeSlots = freeSlots.sortedBy { it.dateStr }
 
         val datesText = if (sortedFreeSlots.isEmpty()) {
-          "• Currently no dates available. Contact us for custom bookings / वर्तमान में कोई तारीख उपलब्ध नहीं है।"
+            "• Check live calendar link below for latest availability / नीचे दिए गए लाइव कैलेंडर लिंक पर उपलब्ध तारीखें देखें।"
         } else {
             sortedFreeSlots.joinToString("\n") { slot ->
                 val displayDate = DateUtils.formatForDisplay(slot.dateStr)
@@ -270,23 +343,26 @@ class StudioRepository(
         }
 
         return """
-📸 *$studioName - Live Availability Calendar*
+📸 *$studioName - Wedding 2025 - 2026*
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
 $greeting
 
+📅 *My Free Dates / मेरी उपलब्ध (FREE) तारीखें:*
 $datesText
 
-🎥 *Gear / Cameras:*
+🎥 *Camera & Gear / कैमरा और उपकरण:*
 $cameraGear
 
-💡 *Special Note:*
+📢 *Broadcast Message / मुख्य संदेश:*
 $note
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
 $footer
 📲 *Contact / WhatsApp:* $formattedPhone
 👤 *Lead Artist:* $photographer
-🌐 *Live Web Booking:* $webBookingUrl
+
+🌐 *Live Calendar Booking Link / लाइव कैलेंडर लिंक:*
+$webBookingUrl
         """.trimIndent()
     }
 
@@ -531,6 +607,49 @@ $footer
                 }
         } catch (e: Exception) {
             Log.e("StudioRepository", "Firestore web booking status update error: ${e.message}")
+        }
+    }
+
+    private fun deleteBookingFromFirestore(booking: BookingRequest) {
+        val ctx = context ?: return
+        try {
+            val db = FirebaseConfig.getFirestore(ctx) ?: return
+            val studioId = getStudioId()
+            if (booking.id > 0) {
+                db.collection("booking_requests").document("${studioId}_${booking.id}").delete()
+            }
+            db.collection("booking_requests").document("${studioId}_${booking.dateStr}_${booking.customerPhone}").delete()
+            db.collection("booking_requests")
+                .whereEqualTo("studioId", studioId)
+                .whereEqualTo("createdAt", booking.createdAt)
+                .get()
+                .addOnSuccessListener { snapshot ->
+                    for (doc in snapshot.documents) {
+                        doc.reference.delete()
+                    }
+                }
+        } catch (e: Exception) {
+            Log.e("StudioRepository", "Firestore booking delete error: ${e.message}")
+        }
+    }
+
+    private fun deleteConfirmedBookingsByDateFromFirestore(dateStr: String) {
+        val ctx = context ?: return
+        try {
+            val db = FirebaseConfig.getFirestore(ctx) ?: return
+            val studioId = getStudioId()
+            db.collection("booking_requests")
+                .whereEqualTo("studioId", studioId)
+                .whereEqualTo("dateStr", dateStr)
+                .whereEqualTo("status", BookingStatus.CONFIRMED.name)
+                .get()
+                .addOnSuccessListener { snapshot ->
+                    for (doc in snapshot.documents) {
+                        doc.reference.delete()
+                    }
+                }
+        } catch (e: Exception) {
+            Log.e("StudioRepository", "Firestore confirmed booking delete by date error: ${e.message}")
         }
     }
 

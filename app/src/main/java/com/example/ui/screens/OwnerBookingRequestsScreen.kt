@@ -9,22 +9,30 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -48,9 +56,11 @@ fun OwnerBookingRequestsScreen(
     onConfirmBooking: (BookingRequest) -> Unit,
     onRejectBooking: (BookingRequest) -> Unit,
     onOpenBookingDetail: (BookingRequest) -> Unit,
+    onDeleteConfirmedBooking: (BookingRequest) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var selectedTab by remember { mutableIntStateOf(0) } // 0: Pending, 1: Confirmed, 2: Rejected
+    var bookingToDelete by remember { mutableStateOf<BookingRequest?>(null) }
 
     val filteredList = when (selectedTab) {
         0 -> bookings.filter { it.status == BookingStatus.PENDING }
@@ -182,6 +192,29 @@ fun OwnerBookingRequestsScreen(
                                             Text("Done / Confirm 🔴", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                                         }
                                     }
+                                } else if (booking.status == BookingStatus.CONFIRMED) {
+                                    Spacer(modifier = Modifier.height(10.dp))
+                                    OutlinedButton(
+                                        onClick = { bookingToDelete = booking },
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .testTag("delete_confirmed_booking_${booking.id}"),
+                                        shape = RoundedCornerShape(8.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Delete,
+                                            contentDescription = "Delete Confirmed Booking",
+                                            tint = StatusBookedRed,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text(
+                                            text = "Delete Booking / बुकिंग हटाएं",
+                                            color = StatusBookedRed,
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -189,5 +222,39 @@ fun OwnerBookingRequestsScreen(
                 }
             }
         }
+    }
+
+    if (bookingToDelete != null) {
+        val target = bookingToDelete!!
+        AlertDialog(
+            onDismissRequest = { bookingToDelete = null },
+            title = {
+                Text(
+                    text = "Delete Confirmed Booking? / कन्फर्म बुकिंग हटाएं?",
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Text(
+                    text = "This will delete ${target.customerName} (${DateUtils.formatForDisplay(target.dateStr)}) from Confirmed Requests, Calendar, and Dashboard Booked Customers.\n\nयह ${target.customerName} की बुकिंग को Requests, Calendar और Dashboard से हटा देगा।"
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        onDeleteConfirmedBooking(target)
+                        bookingToDelete = null
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = StatusBookedRed)
+                ) {
+                    Text("Delete / हटाएं", color = Color.White, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { bookingToDelete = null }) {
+                    Text("Cancel / रद्द करें")
+                }
+            }
+        )
     }
 }

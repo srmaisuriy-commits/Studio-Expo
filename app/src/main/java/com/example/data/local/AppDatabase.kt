@@ -66,10 +66,10 @@ abstract class AppDatabase : RoomDatabase() {
                         ownerPin = "1234",
                         bio = "Luxury Wedding, Pre-Wedding & Cinematic Fashion Photography",
                         instagramHandle = "@studioexpo.official",
-                        cameraGearDetails = "Sony FX3 / A7 IV • DJI Drone • 4K Cinematic Video • Gimbal & Pro Lights",
-                        customWhatsAppNote = "Latest 4K Cinematic Camera & Drone Coverage Available. Special packages available! / नवीनतम 4K सिनेमैटिक कैमरा और ड्रोन कवरेज उपलब्ध है।",
-                        customHeaderGreeting = "Hello! Here are our available (FREE) dates for upcoming wedding & events / नमस्ते! आगामी शादी और इवेंट्स के लिए हमारी उपलब्ध (FREE) तारीखें:",
-                        customFooterNote = "Reserve your special date today! Contact us on WhatsApp for bookings & details / अपनी तारीख आज ही बुक करें!",
+                        cameraGearDetails = StudioProfile.DEFAULT_CAMERA_GEAR,
+                        customWhatsAppNote = StudioProfile.DEFAULT_WHATSAPP_NOTE,
+                        customHeaderGreeting = StudioProfile.DEFAULT_HEADER_GREETING,
+                        customFooterNote = StudioProfile.DEFAULT_FOOTER_NOTE,
                         perDayRate = 25000.0
                     )
                 )

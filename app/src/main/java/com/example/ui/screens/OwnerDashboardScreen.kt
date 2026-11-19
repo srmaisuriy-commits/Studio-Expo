@@ -56,6 +56,7 @@ import com.example.data.model.BookingRequest
 import com.example.data.model.DateStatus
 import com.example.data.model.StudioDateSlot
 import com.example.data.model.StudioProfile
+import com.example.data.model.WorkTypeCatalog
 import com.example.ui.theme.StatusBookedRed
 import com.example.ui.theme.StatusFreeGreen
 import com.example.ui.theme.StatusRequestYellow
@@ -102,10 +103,13 @@ fun OwnerDashboardScreen(
         dateSlots.filter { it.status == DateStatus.BOOKED }.sortedBy { it.dateStr }
     }
 
-    val bookedGroups: List<BookedCustomerGroup> = remember(bookedDateSlots, allBookings) {
+    val bookedGroups: List<BookedCustomerGroup> = remember(bookedDateSlots, allBookings, profile) {
         val groupMap = linkedMapOf<String, MutableList<StudioDateSlot>>()
         bookedDateSlots.forEach { slot ->
-            val matchingBooking = allBookings.firstOrNull { it.dateStr == slot.dateStr }
+            val matchingBooking = allBookings.firstOrNull { booking ->
+                booking.dateStr == slot.dateStr ||
+                    booking.dateStr.split(",").map { it.trim() }.contains(slot.dateStr)
+            }
             val name = slot.bookedCustomerName?.takeIf { it.isNotBlank() }
                 ?: matchingBooking?.customerName?.takeIf { it.isNotBlank() }
                 ?: "Studio Booking"
@@ -122,16 +126,37 @@ fun OwnerDashboardScreen(
             val cName = parts[0]
             val cPhone = if (parts.size > 1) parts[1] else ""
             val sortedDates = slots.map { it.dateStr }.distinct().sorted()
-            val totalAmt = slots.sumOf { s ->
-                if (s.amount > 0) s.amount else {
-                    allBookings.firstOrNull { it.dateStr == s.dateStr }?.amount ?: 0.0
-                }
-            }
             val dateCrewMap = slots.associate { s ->
-                val w = s.workType?.takeIf { it.isNotBlank() }
-                    ?: allBookings.firstOrNull { it.dateStr == s.dateStr }?.workType
+                val matchingBooking = allBookings.firstOrNull { booking ->
+                    booking.dateStr == s.dateStr ||
+                        booking.dateStr.split(",").map { it.trim() }.contains(s.dateStr)
+                }
+                val rawWork = s.workType?.takeIf { it.isNotBlank() }
+                    ?: matchingBooking?.workType?.takeIf { it.isNotBlank() }
                     ?: "Photography Crew"
-                s.dateStr to w
+                val parsedRoles = WorkTypeCatalog.extractRoleNamesFromWorkType(rawWork, profile)
+                val cleanWork = if (parsedRoles.isNotEmpty()) WorkTypeCatalog.formatRolesSummary(parsedRoles) else rawWork
+                s.dateStr to cleanWork
+            }
+            val totalAmt = slots.sumOf { s ->
+                val crewForSlot = dateCrewMap[s.dateStr] ?: s.workType ?: ""
+                val crewEstimate = WorkTypeCatalog.calculateEstimateForDate(crewForSlot, profile)
+                if (s.amount > 0.0) {
+                    s.amount
+                } else if (crewEstimate > 0.0) {
+                    crewEstimate
+                } else {
+                    val matchingBooking = allBookings.firstOrNull { booking ->
+                        booking.dateStr == s.dateStr ||
+                            booking.dateStr.split(",").map { it.trim() }.contains(s.dateStr)
+                    }
+                    if (matchingBooking != null && matchingBooking.amount > 0.0) {
+                        val bDates = matchingBooking.dateStr.split(",").map { it.trim() }.filter { it.isNotBlank() }.size.coerceAtLeast(1)
+                        matchingBooking.amount / bDates
+                    } else {
+                        0.0
+                    }
+                }
             }
             val distinctCrews = dateCrewMap.values.distinct()
             val summary = if (distinctCrews.size == 1) {
@@ -246,39 +271,22 @@ fun OwnerDashboardScreen(
                 }
             }
 
-            // Quick Actions
+            // Quick Action: Manage Dates
             item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                Button(
+                    onClick = onNavigateCalendar,
+                    colors = ButtonDefaults.buttonColors(containerColor = StudioAmber),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth().height(48.dp)
                 ) {
-                    Button(
-                        onClick = onShareWhatsAppClick,
-                        colors = ButtonDefaults.buttonColors(containerColor = StatusFreeGreen),
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.weight(1f).height(48.dp)
-                    ) {
-                        Icon(Icons.Default.Share, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text("Share Free Dates", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                    }
-
-                    Button(
-                        onClick = onNavigateCalendar,
-                        colors = ButtonDefaults.buttonColors(containerColor = StudioAmber),
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.weight(1f).height(48.dp)
-                    ) {
-                        Icon(Icons.Default.CalendarMonth, contentDescription = null, tint = Color.Black, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text("Manage Dates", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                    }
+                    Icon(Icons.Default.CalendarMonth, contentDescription = null, tint = Color.Black, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("Manage Dates / तारीखें मैनेज करें", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                 }
             }
 
-            // Live Customer Web Booking Link Card
+            // Live Customer Web Booking Link Card (Single Share Link Button)
             item {
-                val context = LocalContext.current
                 val studioSlug = profile?.photographerName?.trim()?.lowercase()?.replace(Regex("[^a-z0-9]+"), "_")?.trim('_')?.ifBlank { "rajesh_maisuriya" } ?: "rajesh_maisuriya"
                 val liveWebUrl = "https://srmaisuriy-commits.github.io/Studio-Expo/?studio=$studioSlug"
 
@@ -325,41 +333,23 @@ fun OwnerDashboardScreen(
                             )
                         }
 
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        Button(
+                            onClick = onShareWhatsAppClick,
+                            shape = RoundedCornerShape(10.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = StatusFreeGreen),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(42.dp)
+                                .testTag("dashboard_share_customer_link_btn")
                         ) {
-                            OutlinedButton(
-                                onClick = {
-                                    val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-                                    val clip = android.content.ClipData.newPlainText("Live Web Link", liveWebUrl)
-                                    clipboard.setPrimaryClip(clip)
-                                    android.widget.Toast.makeText(context, "Link copied / लिंक कॉपी हो गया!", android.widget.Toast.LENGTH_SHORT).show()
-                                },
-                                shape = RoundedCornerShape(8.dp),
-                                modifier = Modifier.weight(1f).height(38.dp)
-                            ) {
-                                Icon(Icons.Default.ContentCopy, contentDescription = null, tint = StudioAmber, modifier = Modifier.size(14.dp))
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text("Copy Link", fontSize = 11.sp, color = StudioAmber)
-                            }
-
-                            Button(
-                                onClick = {
-                                    val shareIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
-                                        type = "text/plain"
-                                        putExtra(android.content.Intent.EXTRA_TEXT, "Hello! Check my live photography availability calendar & book your dates directly here:\n$liveWebUrl")
-                                    }
-                                    context.startActivity(android.content.Intent.createChooser(shareIntent, "Share Live Calendar"))
-                                },
-                                shape = RoundedCornerShape(8.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = StatusFreeGreen),
-                                modifier = Modifier.weight(1f).height(38.dp)
-                            ) {
-                                Icon(Icons.Default.Share, contentDescription = null, tint = Color.White, modifier = Modifier.size(14.dp))
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text("Share Link", fontSize = 11.sp, color = Color.White, fontWeight = FontWeight.Bold)
-                            }
+                            Icon(Icons.Default.Share, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "Share Customer Link / ग्राहक को लिंक भेजें",
+                                fontSize = 12.sp,
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold
+                            )
                         }
                     }
                 }

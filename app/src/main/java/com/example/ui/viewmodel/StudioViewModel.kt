@@ -76,7 +76,21 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
                 if (current.whatsapp == "9876543210" || current.whatsapp == "9898012345" || current.whatsapp.isBlank()) {
                     updated = updated.copy(whatsapp = "+91 XXXXX XX520")
                 }
-                repository.updateProfile(updated)
+                if (current.cameraGearDetails.isBlank() || current.cameraGearDetails.contains("Sony FX3 / A7 IV")) {
+                    updated = updated.copy(cameraGearDetails = StudioProfile.DEFAULT_CAMERA_GEAR)
+                }
+                if (current.customWhatsAppNote.isBlank() || current.customWhatsAppNote.contains("Latest 4K Cinematic Camera & Drone Coverage Available")) {
+                    updated = updated.copy(customWhatsAppNote = StudioProfile.DEFAULT_WHATSAPP_NOTE)
+                }
+                if (current.customHeaderGreeting.isBlank() || current.customHeaderGreeting.contains("Hello! Here are our available (FREE) dates for upcoming")) {
+                    updated = updated.copy(customHeaderGreeting = StudioProfile.DEFAULT_HEADER_GREETING)
+                }
+                if (current.customFooterNote.isBlank() || current.customFooterNote.contains("Reserve your special date today!")) {
+                    updated = updated.copy(customFooterNote = StudioProfile.DEFAULT_FOOTER_NOTE)
+                }
+                if (updated != current) {
+                    repository.updateProfile(updated)
+                }
             }
             repository.sanitizeOldDemoNumbers()
         }
@@ -439,17 +453,16 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
         }
 
         viewModelScope.launch {
-            val isMulti = dates.size > 1
-            val perDateAmount = if (isMulti) amount / dates.size else amount
+            val currentProfile = repository.getProfileSync() ?: profile.value
 
-            // Parse date-specific crew assignments if provided in format "date: role | date: role"
+            // Parse date-specific crew assignments if provided in format "yyyy-MM-dd: role | yyyy-MM-dd: role"
             val dateSpecificMap = mutableMapOf<String, String>()
-            if (workType.contains("|") || workType.contains(":")) {
+            if (workType.contains("|") || Regex("^\\d{4}-\\d{2}-\\d{2}:").containsMatchIn(workType)) {
                 workType.split("|").forEach { part ->
-                    val segments = part.split(":")
-                    if (segments.size >= 2) {
-                        val d = segments[0].trim()
-                        val w = segments[1].trim()
+                    val match = Regex("^\\s*(\\d{4}-\\d{2}-\\d{2}):\\s*(.+)$").find(part)
+                    if (match != null) {
+                        val d = match.groupValues[1].trim()
+                        val w = match.groupValues[2].trim()
                         if (d.isNotBlank() && w.isNotBlank()) {
                             dateSpecificMap[d] = w
                         }
@@ -457,14 +470,22 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
                 }
             }
 
-            dates.forEach { dateIso ->
-                val specificWorkForDate = dateSpecificMap[dateIso] ?: workType
+            val perDateWorks = dates.map { dateIso ->
+                dateSpecificMap[dateIso] ?: workType
+            }
+            val perDateAmounts = repository.allocateAmountsAcrossDates(
+                workTypes = perDateWorks,
+                totalAmount = amount,
+                profile = currentProfile
+            )
+
+            dates.forEachIndexed { idx, dateIso ->
                 repository.createDirectBooking(
                     dateStr = dateIso,
                     customerName = customerName,
                     customerPhone = customerPhone,
-                    workType = specificWorkForDate,
-                    amount = perDateAmount
+                    workType = perDateWorks[idx],
+                    amount = perDateAmounts[idx]
                 )
             }
             closeDirectBookingDialog()
@@ -486,6 +507,14 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
             repository.rejectBooking(booking.id, booking.dateStr)
             closeBookingDetail()
             showToast("Booking Request Rejected / बुकिंग अनुरोध अस्वीकृत किया गया")
+        }
+    }
+
+    fun deleteConfirmedBooking(booking: BookingRequest) {
+        viewModelScope.launch {
+            repository.deleteConfirmedBooking(booking)
+            closeBookingDetail()
+            showToast("Confirmed Booking Deleted & Date(s) Removed / कन्फर्म बुकिंग और तारीख हटाई गई")
         }
     }
 
@@ -551,10 +580,26 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
         }
 
         viewModelScope.launch {
+            val currentProfile = repository.getProfileSync() ?: profile.value
             var firstId: Long? = null
             val isMultiDate = dates.size > 1
-            val perDateAmount = if (isMultiDate) amount / dates.size else amount
-            dates.forEach { dateIso ->
+            val workParts = workType.split("|").map { it.trim() }.filter { it.isNotBlank() }
+            val perDateWorks = dates.mapIndexed { idx, dateIso ->
+                val displayFull = DateUtils.formatForDisplay(dateIso)
+                val matchedPart = workParts.firstOrNull { it.contains(dateIso) || it.contains(displayFull) }
+                    ?: workParts.getOrNull(idx)
+                val rawWork = matchedPart?.replace(Regex("^[^:]{1,30}:\\s*"), "")?.trim()
+                    ?: workType
+                val roleNames = com.example.data.model.WorkTypeCatalog.extractRoleNamesFromWorkType(rawWork, currentProfile)
+                if (roleNames.isNotEmpty()) com.example.data.model.WorkTypeCatalog.formatRolesSummary(roleNames) else rawWork
+            }
+            val perDateAmounts = repository.allocateAmountsAcrossDates(
+                workTypes = perDateWorks,
+                totalAmount = amount,
+                profile = currentProfile
+            )
+
+            dates.forEachIndexed { idx, dateIso ->
                 val multiNote = if (isMultiDate) {
                     "${if (notes.isNotBlank()) "$notes\n" else ""}Part of ${dates.size}-day shoot (${dates.joinToString(", ")})"
                 } else notes
@@ -563,8 +608,8 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
                     dateStr = dateIso,
                     name = name,
                     phone = phone,
-                    workType = workType,
-                    amount = perDateAmount,
+                    workType = perDateWorks[idx],
+                    amount = perDateAmounts[idx],
                     location = location,
                     notes = multiNote
                 )
