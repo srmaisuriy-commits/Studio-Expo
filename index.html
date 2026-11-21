@@ -737,14 +737,19 @@
     };
 
     // 1. Live listener for studio profile & custom crew rates
+    let unsubscribeDefaultProfile = null;
     try {
       onSnapshot(doc(db, "studio_profile", studioId), (docSnap) => {
         if (docSnap.exists()) {
+          if (unsubscribeDefaultProfile) {
+            unsubscribeDefaultProfile();
+            unsubscribeDefaultProfile = null;
+          }
           const profileData = docSnap.data();
           window.CURRENT_STUDIO_PROFILE = profileData;
           if (window.onStudioProfileLoaded) window.onStudioProfileLoaded(profileData);
-        } else {
-          onSnapshot(doc(db, "studio_profile", "default"), (defaultSnap) => {
+        } else if (!unsubscribeDefaultProfile) {
+          unsubscribeDefaultProfile = onSnapshot(doc(db, "studio_profile", "default"), (defaultSnap) => {
             if (defaultSnap.exists()) {
               const profileData = defaultSnap.data();
               window.CURRENT_STUDIO_PROFILE = profileData;
@@ -760,6 +765,7 @@
     // 2. Live listener for real-time calendar updates from Android app for this specific studio
     try {
       onSnapshot(collection(db, "studio_date_slots"), (snapshot) => {
+        const nextSlots = {};
         snapshot.forEach((d) => {
           const item = d.data();
           const docStudio = item.studioId;
@@ -768,12 +774,15 @@
             return;
           }
           const dateKey = item.dateStr || d.id.replace(window.__STUDIO_ID__ + "_", "");
-          window.LIVE_DATE_SLOTS[dateKey] = {
-            status: item.status,
-            note: item.note || "",
-            workType: item.workType || ""
-          };
+          if (dateKey) {
+            nextSlots[dateKey] = {
+              status: item.status,
+              note: item.note || "",
+              workType: item.workType || ""
+            };
+          }
         });
+        window.LIVE_DATE_SLOTS = nextSlots;
         if (window.refreshCalendarUI) {
           window.refreshCalendarUI();
         }
@@ -986,11 +995,7 @@
     }
 
     // Live Date Slots synced with Firestore
-    window.LIVE_DATE_SLOTS = {
-      "2026-10-24": { status: "BOOKED", note: "Shoot in Ahmedabad" },
-      "2026-10-25": { status: "BOOKED", note: "Candid & Drone Shoot" },
-      "2026-10-28": { status: "FREE", note: "Available" }
-    };
+    window.LIVE_DATE_SLOTS = {};
 
     let currentYear = 2026;
     let currentMonth = 9; // October (0-indexed)
@@ -1049,7 +1054,20 @@
       closeModalBtn.addEventListener('click', () => successModal.classList.remove('active'));
 
       window.refreshCalendarUI = () => {
+        let selectionChanged = false;
+        Array.from(selectedDates).forEach(d => {
+          const slotInfo = window.LIVE_DATE_SLOTS[d];
+          if (slotInfo && slotInfo.status === "BOOKED") {
+            selectedDates.delete(d);
+            delete window.DATE_CREW_MAP[d];
+            selectionChanged = true;
+          }
+        });
         renderCalendar();
+        if (selectionChanged) {
+          updateSelectedSummary();
+          renderDateWiseCrewCards();
+        }
         updateTotalPackage();
       };
 

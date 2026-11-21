@@ -12,11 +12,13 @@ import com.example.data.model.SlotType
 import com.example.data.model.StudioDateSlot
 import com.example.data.model.StudioProfile
 import com.example.data.model.WorkTypeCatalog
+import com.google.firebase.firestore.DocumentChange
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import java.util.concurrent.ConcurrentHashMap
 
 class StudioRepository(
     private val dao: StudioDao,
@@ -34,6 +36,44 @@ class StudioRepository(
     }
 
     private var cachedProfile: StudioProfile? = null
+    private val deletedDatesGuard = ConcurrentHashMap<String, Long>()
+    private val deletedBookingsGuard = ConcurrentHashMap<String, Long>()
+
+    private fun markDateDeleted(dateStr: String) {
+        deletedDatesGuard[dateStr.trim()] = System.currentTimeMillis() + 8000L
+    }
+
+    private fun unmarkDateDeleted(dateStr: String) {
+        deletedDatesGuard.remove(dateStr.trim())
+    }
+
+    private fun isDateDeleteGuarded(dateStr: String): Boolean {
+        val expiry = deletedDatesGuard[dateStr.trim()] ?: return false
+        if (System.currentTimeMillis() < expiry) return true
+        deletedDatesGuard.remove(dateStr.trim())
+        return false
+    }
+
+    private fun markBookingDeleted(booking: BookingRequest) {
+        val nowPlus = System.currentTimeMillis() + 8000L
+        deletedBookingsGuard["${booking.customerPhone}|${booking.dateStr}"] = nowPlus
+        deletedBookingsGuard["created:${booking.createdAt}"] = nowPlus
+    }
+
+    private fun isBookingDeleteGuarded(phone: String, dateStr: String, createdAt: Long): Boolean {
+        val now = System.currentTimeMillis()
+        val k1 = "$phone|$dateStr"
+        val k2 = "created:$createdAt"
+        val e1 = deletedBookingsGuard[k1]
+        if (e1 != null) {
+            if (now < e1) return true else deletedBookingsGuard.remove(k1)
+        }
+        val e2 = deletedBookingsGuard[k2]
+        if (e2 != null) {
+            if (now < e2) return true else deletedBookingsGuard.remove(k2)
+        }
+        return false
+    }
 
     suspend fun getProfileSync(): StudioProfile? {
         val p = dao.getProfileSync()
@@ -52,6 +92,7 @@ class StudioRepository(
         note: String,
         slotType: SlotType = SlotType.FULL_DAY
     ) {
+        unmarkDateDeleted(dateStr)
         val slot = StudioDateSlot(
             dateStr = dateStr,
             status = DateStatus.FREE,
@@ -67,6 +108,7 @@ class StudioRepository(
         status: DateStatus,
         note: String = ""
     ) {
+        unmarkDateDeleted(dateStr)
         val existing = dao.getDateSlot(dateStr)
         val slot = existing?.copy(status = status, note = note)
             ?: StudioDateSlot(dateStr = dateStr, status = status, note = note)
@@ -75,8 +117,13 @@ class StudioRepository(
     }
 
     suspend fun deleteDateSlot(dateStr: String) {
+        markDateDeleted(dateStr)
+        val existingSlot = dao.getDateSlot(dateStr)
         dao.deleteDateSlot(dateStr)
         deleteSlotFromFirestore(dateStr)
+        if (existingSlot != null && existingSlot.status == DateStatus.BOOKED) {
+            cleanupConfirmedBookingsForDates(listOf(dateStr))
+        }
     }
 
     suspend fun createDirectBooking(
@@ -86,6 +133,7 @@ class StudioRepository(
         workType: String,
         amount: Double
     ) {
+        unmarkDateDeleted(dateStr)
         // Mark slot as booked
         val slot = StudioDateSlot(
             dateStr = dateStr,
@@ -99,7 +147,7 @@ class StudioRepository(
         dao.insertOrUpdateDateSlot(slot)
         syncSlotToFirestore(slot)
 
-        // Record confirmed booking request
+        // Record confirmed booking request with persisted Room ID
         val booking = BookingRequest(
             dateStr = dateStr,
             customerName = customerName,
@@ -108,8 +156,8 @@ class StudioRepository(
             amount = amount,
             status = BookingStatus.CONFIRMED
         )
-        dao.insertBooking(booking)
-        syncBookingToFirestore(booking)
+        val newId = dao.insertBooking(booking)
+        syncBookingToFirestore(booking.copy(id = newId))
     }
 
     suspend fun submitCustomerBooking(
@@ -164,6 +212,7 @@ class StudioRepository(
         )
 
         dates.forEachIndexed { idx, singleDate ->
+            unmarkDateDeleted(singleDate)
             val slot = StudioDateSlot(
                 dateStr = singleDate,
                 status = DateStatus.BOOKED,
@@ -178,8 +227,7 @@ class StudioRepository(
         }
         booking?.let {
             val confirmedBooking = it.copy(status = BookingStatus.CONFIRMED)
-            syncBookingToFirestore(confirmedBooking)
-            updateMatchingWebBookingStatusInFirestore(confirmedBooking, BookingStatus.CONFIRMED)
+            updateOrSyncConfirmedBookingInFirestore(confirmedBooking)
         }
     }
 
@@ -190,13 +238,13 @@ class StudioRepository(
         dates.forEach { singleDate ->
             val existingSlot = dao.getDateSlot(singleDate)
             if (existingSlot != null && existingSlot.status == DateStatus.REQUEST) {
+                markDateDeleted(singleDate)
                 dao.deleteDateSlot(singleDate)
                 deleteSlotFromFirestore(singleDate)
             }
         }
         booking?.let {
             val rejectedBooking = it.copy(status = BookingStatus.REJECTED)
-            syncBookingToFirestore(rejectedBooking)
             updateMatchingWebBookingStatusInFirestore(rejectedBooking, BookingStatus.REJECTED)
         }
     }
@@ -204,6 +252,9 @@ class StudioRepository(
     suspend fun deleteConfirmedBooking(booking: BookingRequest) {
         val dates = booking.dateStr.split(",").map { it.trim() }.filter { it.isNotBlank() }
             .ifEmpty { listOf(booking.dateStr) }
+        markBookingDeleted(booking)
+        dates.forEach { markDateDeleted(it) }
+
         dao.deleteBooking(booking.id)
         deleteBookingFromFirestore(booking)
 
@@ -231,10 +282,12 @@ class StudioRepository(
         }
         val removedDates = originalDates.filterNot { newDates.contains(it) }
         removedDates.forEach { removedDate ->
+            markDateDeleted(removedDate)
             dao.deleteDateSlot(removedDate)
             deleteSlotFromFirestore(removedDate)
             deleteConfirmedBookingsByDateFromFirestore(removedDate)
         }
+        cleanupConfirmedBookingsForDates(allAffectedDates)
 
         if (newDates.isNotEmpty()) {
             val perDateWorks = newDates.map { dateStr ->
@@ -246,6 +299,7 @@ class StudioRepository(
                 profile = profile
             )
             newDates.forEachIndexed { idx, dateStr ->
+                unmarkDateDeleted(dateStr)
                 val dateWorkType = perDateWorks[idx]
                 val dateAmount = perDateAmounts[idx]
                 val slot = StudioDateSlot(
@@ -276,10 +330,33 @@ class StudioRepository(
 
     suspend fun cancelBookingForDates(dates: List<String>) {
         dates.forEach { dateStr ->
+            markDateDeleted(dateStr)
             dao.deleteDateSlot(dateStr)
             dao.deleteConfirmedBookingsByDate(dateStr)
             deleteSlotFromFirestore(dateStr)
             deleteConfirmedBookingsByDateFromFirestore(dateStr)
+        }
+        cleanupConfirmedBookingsForDates(dates)
+    }
+
+    private suspend fun cleanupConfirmedBookingsForDates(targetDates: List<String>) {
+        if (targetDates.isEmpty()) return
+        val targetSet = targetDates.map { it.trim() }.filter { it.isNotBlank() }.toSet()
+        val allConfirmed = dao.getAllBookingsSync().filter { it.status == BookingStatus.CONFIRMED }
+        allConfirmed.forEach { booking ->
+            val bookingDates = booking.dateStr.split(",").map { it.trim() }.filter { it.isNotBlank() }
+            if (bookingDates.any { targetSet.contains(it) }) {
+                val remaining = bookingDates.filterNot { targetSet.contains(it) }
+                if (remaining.isEmpty()) {
+                    markBookingDeleted(booking)
+                    dao.deleteBooking(booking.id)
+                    deleteBookingFromFirestore(booking)
+                } else {
+                    val updatedBooking = booking.copy(dateStr = remaining.joinToString(", "))
+                    dao.updateBooking(updatedBooking)
+                    updateOrSyncConfirmedBookingInFirestore(updatedBooking)
+                }
+            }
         }
     }
 
@@ -376,6 +453,12 @@ $webBookingUrl
         """.trimIndent()
     }
 
+    suspend fun resolveStudioId(): String {
+        val p = cachedProfile ?: dao.getProfileSync()?.also { cachedProfile = it }
+        val clean = p?.photographerName?.trim()?.lowercase()?.replace(Regex("[^a-z0-9]+"), "_")?.trim('_')
+        return if (!clean.isNullOrBlank()) clean else "rajesh_maisuriya"
+    }
+
     fun getStudioId(): String {
         val p = cachedProfile
         val clean = p?.photographerName?.trim()?.lowercase()?.replace(Regex("[^a-z0-9]+"), "_")?.trim('_')
@@ -393,7 +476,7 @@ $webBookingUrl
         try {
             val db = FirebaseConfig.getFirestore(ctx) ?: return
 
-            // 1. Listen for real-time calendar slot updates from Firestore
+            // 1. Listen for real-time calendar slot updates & deletions from Firestore
             db.collection("studio_date_slots")
                 .addSnapshotListener { snapshot, error ->
                     if (error != null || snapshot == null) return@addSnapshotListener
@@ -402,6 +485,31 @@ $webBookingUrl
                         if (currentProfile != null) cachedProfile = currentProfile
                         val studioId = getStudioId()
 
+                        // Handle deletions from Firestore first
+                        val activeDatesForStudio = mutableSetOf<String>()
+                        for (doc in snapshot.documents) {
+                            val docStudio = doc.getString("studioId")
+                            if (docStudio != null && docStudio != studioId && !doc.id.startsWith("${studioId}_")) {
+                                continue
+                            }
+                            val dStr = doc.getString("dateStr") ?: doc.id.replace("${studioId}_", "")
+                            if (dStr.isNotBlank()) activeDatesForStudio.add(dStr)
+                        }
+
+                        for (change in snapshot.documentChanges) {
+                            if (change.type == DocumentChange.Type.REMOVED) {
+                                val doc = change.document
+                                val docStudio = doc.getString("studioId")
+                                if (docStudio != null && docStudio != studioId && !doc.id.startsWith("${studioId}_")) {
+                                    continue
+                                }
+                                val removedDate = doc.getString("dateStr") ?: doc.id.replace("${studioId}_", "")
+                                if (removedDate.isNotBlank() && !activeDatesForStudio.contains(removedDate)) {
+                                    dao.deleteDateSlot(removedDate)
+                                }
+                            }
+                        }
+
                         for (doc in snapshot.documents) {
                             val docStudio = doc.getString("studioId")
                             // Filter by studioId (or unassigned/default for Rajesh Maisuriya)
@@ -409,6 +517,9 @@ $webBookingUrl
                                 continue
                             }
                             val dateStr = doc.getString("dateStr") ?: doc.id.replace("${studioId}_", "")
+                            if (dateStr.isBlank() || isDateDeleteGuarded(dateStr)) {
+                                continue
+                            }
                             val statusStr = doc.getString("status") ?: DateStatus.FREE.name
                             val status = try { DateStatus.valueOf(statusStr) } catch (_: Exception) { DateStatus.FREE }
                             val slotTypeStr = doc.getString("slotType") ?: SlotType.FULL_DAY.name
@@ -435,7 +546,7 @@ $webBookingUrl
                     }
                 }
 
-            // 2. Listen for incoming customer booking requests submitted via web link in real-time
+            // 2. Listen for incoming customer booking requests & deletions from Firestore
             db.collection("booking_requests")
                 .addSnapshotListener { snapshot, error ->
                     if (error != null || snapshot == null) return@addSnapshotListener
@@ -443,6 +554,31 @@ $webBookingUrl
                         val currentProfile = dao.getProfileSync()
                         if (currentProfile != null) cachedProfile = currentProfile
                         val studioId = getStudioId()
+
+                        // Handle deletions from Firestore
+                        for (change in snapshot.documentChanges) {
+                            if (change.type == DocumentChange.Type.REMOVED) {
+                                val doc = change.document
+                                val docStudio = doc.getString("studioId")
+                                if (docStudio != null && docStudio != studioId && !doc.id.startsWith("${studioId}_")) {
+                                    continue
+                                }
+                                val rDate = doc.getString("dateStr") ?: ""
+                                val rPhoneRaw = doc.getString("customerPhone") ?: ""
+                                val rPhone = if (rPhoneRaw == "9898012345" || rPhoneRaw == "9876543210") "+91 XXXXX XX520" else rPhoneRaw
+                                val stillExistsInSnapshot = snapshot.documents.any { rem ->
+                                    val rs = rem.getString("studioId")
+                                    (rs == null || rs == studioId || rem.id.startsWith("${studioId}_")) &&
+                                        rem.getString("dateStr") == rDate &&
+                                        (rem.getString("customerPhone") ?: "") == rPhoneRaw
+                                }
+                                if (!stillExistsInSnapshot && rDate.isNotBlank()) {
+                                    dao.getBookingByPhoneAndDate(rPhone, rDate)?.let {
+                                        dao.deleteBooking(it.id)
+                                    }
+                                }
+                            }
+                        }
 
                         for (doc in snapshot.documents) {
                             val docStudio = doc.getString("studioId")
@@ -464,6 +600,10 @@ $webBookingUrl
                             val status = try { BookingStatus.valueOf(statusStr) } catch (_: Exception) { BookingStatus.PENDING }
                             val createdAt = doc.getLong("createdAt") ?: System.currentTimeMillis()
 
+                            if (isBookingDeleteGuarded(customerPhone, dateStr, createdAt)) {
+                                continue
+                            }
+
                             val existing = dao.getBookingByPhoneAndDate(customerPhone, dateStr)
                             if (existing == null) {
                                 val booking = BookingRequest(
@@ -482,15 +622,17 @@ $webBookingUrl
                                 // Also ensure calendar shows yellow REQUEST for pending web requests
                                 if (status == BookingStatus.PENDING) {
                                     dateStr.split(",").map { it.trim() }.filter { it.isNotBlank() }.forEach { singleDate ->
-                                        val existingSlot = dao.getDateSlot(singleDate)
-                                        if (existingSlot == null || existingSlot.status == DateStatus.FREE) {
-                                            dao.insertOrUpdateDateSlot(
-                                                StudioDateSlot(
-                                                    dateStr = singleDate,
-                                                    status = DateStatus.REQUEST,
-                                                    note = "Requested by $customerName"
+                                        if (!isDateDeleteGuarded(singleDate)) {
+                                            val existingSlot = dao.getDateSlot(singleDate)
+                                            if (existingSlot == null || existingSlot.status == DateStatus.FREE) {
+                                                dao.insertOrUpdateDateSlot(
+                                                    StudioDateSlot(
+                                                        dateStr = singleDate,
+                                                        status = DateStatus.REQUEST,
+                                                        note = "Requested by $customerName"
+                                                    )
                                                 )
-                                            )
+                                            }
                                         }
                                     }
                                 }
@@ -505,11 +647,11 @@ $webBookingUrl
         }
     }
 
-    private fun syncSlotToFirestore(slot: StudioDateSlot) {
+    private suspend fun syncSlotToFirestore(slot: StudioDateSlot) {
         val ctx = context ?: return
         try {
             val db = FirebaseConfig.getFirestore(ctx) ?: return
-            val studioId = getStudioId()
+            val studioId = resolveStudioId()
             val data = hashMapOf(
                 "studioId" to studioId,
                 "dateStr" to slot.dateStr,
@@ -522,30 +664,49 @@ $webBookingUrl
                 "amount" to slot.amount,
                 "updatedAt" to System.currentTimeMillis()
             )
-            db.collection("studio_date_slots").document("${studioId}_${slot.dateStr}").set(data)
-            db.collection("studio_date_slots").document(slot.dateStr).set(data)
+            // Write single canonical doc per studio+date and remove any legacy unprefixed doc atomically
+            val batch = db.batch()
+            batch.set(db.collection("studio_date_slots").document("${studioId}_${slot.dateStr}"), data)
+            batch.delete(db.collection("studio_date_slots").document(slot.dateStr))
+            batch.commit()
         } catch (e: Exception) {
             Log.e("StudioRepository", "Firestore slot sync error: ${e.message}")
         }
     }
 
-    private fun deleteSlotFromFirestore(dateStr: String) {
+    private suspend fun deleteSlotFromFirestore(dateStr: String) {
         val ctx = context ?: return
         try {
             val db = FirebaseConfig.getFirestore(ctx) ?: return
-            val studioId = getStudioId()
-            db.collection("studio_date_slots").document("${studioId}_${dateStr}").delete()
-            db.collection("studio_date_slots").document(dateStr).delete()
+            val studioId = resolveStudioId()
+            val batch = db.batch()
+            batch.delete(db.collection("studio_date_slots").document("${studioId}_${dateStr}"))
+            batch.delete(db.collection("studio_date_slots").document(dateStr))
+            batch.commit()
+
+            db.collection("studio_date_slots")
+                .whereEqualTo("studioId", studioId)
+                .whereEqualTo("dateStr", dateStr)
+                .get()
+                .addOnSuccessListener { snapshot ->
+                    if (!snapshot.isEmpty) {
+                        val extraBatch = db.batch()
+                        for (doc in snapshot.documents) {
+                            extraBatch.delete(doc.reference)
+                        }
+                        extraBatch.commit()
+                    }
+                }
         } catch (e: Exception) {
             Log.e("StudioRepository", "Firestore slot delete error: ${e.message}")
         }
     }
 
-    private fun syncProfileToFirestore(profile: StudioProfile) {
+    private suspend fun syncProfileToFirestore(profile: StudioProfile) {
         val ctx = context ?: return
         try {
             val db = FirebaseConfig.getFirestore(ctx) ?: return
-            val studioId = getStudioId()
+            val studioId = resolveStudioId()
             val data = hashMapOf(
                 "studioId" to studioId,
                 "studioName" to profile.studioName,
@@ -583,11 +744,11 @@ $webBookingUrl
         }
     }
 
-    private fun syncBookingToFirestore(booking: BookingRequest) {
+    private suspend fun syncBookingToFirestore(booking: BookingRequest) {
         val ctx = context ?: return
         try {
             val db = FirebaseConfig.getFirestore(ctx) ?: return
-            val studioId = getStudioId()
+            val studioId = resolveStudioId()
             val data = hashMapOf(
                 "id" to booking.id,
                 "studioId" to studioId,
@@ -608,18 +769,83 @@ $webBookingUrl
         }
     }
 
-    private fun updateMatchingWebBookingStatusInFirestore(booking: BookingRequest, newStatus: BookingStatus) {
+    private suspend fun updateOrSyncConfirmedBookingInFirestore(booking: BookingRequest) {
         val ctx = context ?: return
         try {
             val db = FirebaseConfig.getFirestore(ctx) ?: return
-            val studioId = getStudioId()
+            val studioId = resolveStudioId()
             db.collection("booking_requests")
                 .whereEqualTo("studioId", studioId)
                 .whereEqualTo("createdAt", booking.createdAt)
                 .get()
                 .addOnSuccessListener { snapshot ->
-                    for (doc in snapshot.documents) {
-                        doc.reference.update("status", newStatus.name)
+                    if (!snapshot.isEmpty) {
+                        val batch = db.batch()
+                        for (doc in snapshot.documents) {
+                            batch.update(
+                                doc.reference,
+                                mapOf(
+                                    "status" to booking.status.name,
+                                    "dateStr" to booking.dateStr
+                                )
+                            )
+                        }
+                        batch.commit()
+                    } else {
+                        val data = hashMapOf(
+                            "id" to booking.id,
+                            "studioId" to studioId,
+                            "dateStr" to booking.dateStr,
+                            "customerName" to booking.customerName,
+                            "customerPhone" to booking.customerPhone,
+                            "workType" to booking.workType,
+                            "amount" to booking.amount,
+                            "location" to booking.location,
+                            "notes" to booking.notes,
+                            "status" to booking.status.name,
+                            "createdAt" to booking.createdAt
+                        )
+                        val docId = if (booking.id > 0) "${studioId}_${booking.id}" else "${studioId}_${booking.dateStr}_${booking.customerPhone}"
+                        db.collection("booking_requests").document(docId).set(data)
+                    }
+                }
+        } catch (e: Exception) {
+            Log.e("StudioRepository", "Firestore confirmed booking update error: ${e.message}")
+        }
+    }
+
+    private suspend fun updateMatchingWebBookingStatusInFirestore(booking: BookingRequest, newStatus: BookingStatus) {
+        val ctx = context ?: return
+        try {
+            val db = FirebaseConfig.getFirestore(ctx) ?: return
+            val studioId = resolveStudioId()
+            db.collection("booking_requests")
+                .whereEqualTo("studioId", studioId)
+                .whereEqualTo("createdAt", booking.createdAt)
+                .get()
+                .addOnSuccessListener { snapshot ->
+                    if (!snapshot.isEmpty) {
+                        val batch = db.batch()
+                        for (doc in snapshot.documents) {
+                            batch.update(doc.reference, "status", newStatus.name)
+                        }
+                        batch.commit()
+                    } else {
+                        val data = hashMapOf(
+                            "id" to booking.id,
+                            "studioId" to studioId,
+                            "dateStr" to booking.dateStr,
+                            "customerName" to booking.customerName,
+                            "customerPhone" to booking.customerPhone,
+                            "workType" to booking.workType,
+                            "amount" to booking.amount,
+                            "location" to booking.location,
+                            "notes" to booking.notes,
+                            "status" to newStatus.name,
+                            "createdAt" to booking.createdAt
+                        )
+                        val docId = if (booking.id > 0) "${studioId}_${booking.id}" else "${studioId}_${booking.dateStr}_${booking.customerPhone}"
+                        db.collection("booking_requests").document(docId).set(data)
                     }
                 }
         } catch (e: Exception) {
@@ -627,22 +853,44 @@ $webBookingUrl
         }
     }
 
-    private fun deleteBookingFromFirestore(booking: BookingRequest) {
+    private suspend fun deleteBookingFromFirestore(booking: BookingRequest) {
         val ctx = context ?: return
         try {
             val db = FirebaseConfig.getFirestore(ctx) ?: return
-            val studioId = getStudioId()
+            val studioId = resolveStudioId()
+            val directBatch = db.batch()
             if (booking.id > 0) {
-                db.collection("booking_requests").document("${studioId}_${booking.id}").delete()
+                directBatch.delete(db.collection("booking_requests").document("${studioId}_${booking.id}"))
             }
-            db.collection("booking_requests").document("${studioId}_${booking.dateStr}_${booking.customerPhone}").delete()
+            directBatch.delete(db.collection("booking_requests").document("${studioId}_${booking.dateStr}_${booking.customerPhone}"))
+            directBatch.commit()
+
             db.collection("booking_requests")
                 .whereEqualTo("studioId", studioId)
                 .whereEqualTo("createdAt", booking.createdAt)
                 .get()
                 .addOnSuccessListener { snapshot ->
-                    for (doc in snapshot.documents) {
-                        doc.reference.delete()
+                    if (!snapshot.isEmpty) {
+                        val b = db.batch()
+                        for (doc in snapshot.documents) {
+                            b.delete(doc.reference)
+                        }
+                        b.commit()
+                    }
+                }
+
+            db.collection("booking_requests")
+                .whereEqualTo("studioId", studioId)
+                .whereEqualTo("dateStr", booking.dateStr)
+                .whereEqualTo("customerName", booking.customerName)
+                .get()
+                .addOnSuccessListener { snapshot ->
+                    if (!snapshot.isEmpty) {
+                        val b = db.batch()
+                        for (doc in snapshot.documents) {
+                            b.delete(doc.reference)
+                        }
+                        b.commit()
                     }
                 }
         } catch (e: Exception) {
@@ -650,20 +898,32 @@ $webBookingUrl
         }
     }
 
-    private fun deleteConfirmedBookingsByDateFromFirestore(dateStr: String) {
+    private suspend fun deleteConfirmedBookingsByDateFromFirestore(dateStr: String) {
         val ctx = context ?: return
         try {
             val db = FirebaseConfig.getFirestore(ctx) ?: return
-            val studioId = getStudioId()
+            val studioId = resolveStudioId()
             db.collection("booking_requests")
                 .whereEqualTo("studioId", studioId)
-                .whereEqualTo("dateStr", dateStr)
                 .whereEqualTo("status", BookingStatus.CONFIRMED.name)
                 .get()
                 .addOnSuccessListener { snapshot ->
+                    val batch = db.batch()
+                    var hasChanges = false
                     for (doc in snapshot.documents) {
-                        doc.reference.delete()
+                        val docDateStr = doc.getString("dateStr") ?: ""
+                        val datesList = docDateStr.split(",").map { it.trim() }.filter { it.isNotBlank() }
+                        if (datesList.contains(dateStr)) {
+                            val remaining = datesList.filterNot { it == dateStr }
+                            if (remaining.isEmpty()) {
+                                batch.delete(doc.reference)
+                            } else {
+                                batch.update(doc.reference, "dateStr", remaining.joinToString(", "))
+                            }
+                            hasChanges = true
+                        }
                     }
+                    if (hasChanges) batch.commit()
                 }
         } catch (e: Exception) {
             Log.e("StudioRepository", "Firestore confirmed booking delete by date error: ${e.message}")
