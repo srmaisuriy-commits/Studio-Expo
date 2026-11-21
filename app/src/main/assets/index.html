@@ -695,10 +695,30 @@
       const docId = window.__STUDIO_ID__ + "_" + cleanDateStr + "_" + (data.customerPhone || "phone") + "_" + Date.now();
       await setDoc(doc(db, "booking_requests", docId), data);
 
-      if (Array.isArray(selectedDatesList)) {
+      if (Array.isArray(selectedDatesList) && selectedDatesList.length > 0) {
+        const perDateAmountMap = {};
+        const breakdownList = Array.isArray(data.breakdown) ? data.breakdown : [];
+        const breakdownSum = breakdownList.reduce((acc, b) => acc + (Number(b.subtotal) || 0), 0);
+        const totalAmt = Number(data.amount) || 0;
+
+        if (breakdownList.length === selectedDatesList.length && Math.round(breakdownSum) === Math.round(totalAmt)) {
+          breakdownList.forEach(b => {
+            perDateAmountMap[b.date] = { amount: Number(b.subtotal) || 0, crew: b.crew || data.workType || "" };
+          });
+        } else {
+          const base = Math.floor(totalAmt / selectedDatesList.length);
+          let remainder = totalAmt - base * selectedDatesList.length;
+          selectedDatesList.forEach((d, idx) => {
+            const extra = idx === selectedDatesList.length - 1 ? remainder : 0;
+            const b = breakdownList.find(item => item.date === d);
+            perDateAmountMap[d] = { amount: base + extra, crew: (b && b.crew) ? b.crew : (data.workType || "") };
+          });
+        }
+
         for (const isoDate of selectedDatesList) {
           const existing = window.LIVE_DATE_SLOTS && window.LIVE_DATE_SLOTS[isoDate];
           if (!existing || existing.status !== "BOOKED") {
+            const perDateInfo = perDateAmountMap[isoDate] || { amount: 0, crew: data.workType || "" };
             await setDoc(doc(db, "studio_date_slots", window.__STUDIO_ID__ + "_" + isoDate), {
               studioId: window.__STUDIO_ID__,
               dateStr: isoDate,
@@ -707,8 +727,8 @@
               note: "Requested by " + (data.customerName || "Customer"),
               bookedCustomerName: "",
               bookedCustomerPhone: "",
-              workType: data.workType || "",
-              amount: data.amount || 0,
+              workType: perDateInfo.crew,
+              amount: perDateInfo.amount,
               updatedAt: Date.now()
             });
           }
@@ -947,14 +967,23 @@
   <script>
     // 7 Photographer Crew Roles as requested
     const CREW_ROLES = [
-      { id: "traditional_photo", title: "Traditional Photographer", gujarati: "ટ્રેડિશનલ ફોટોગ્રાફર", emoji: "📸", price: 10000 },
-      { id: "traditional_video", title: "Traditional Videographer", gujarati: "ટ્રેડિશનલ વિડિયોગ્રાફર", emoji: "📹", price: 12000 },
-      { id: "candid_photo", title: "Candid Photographer", gujarati: "કેન્ડિડ ફોટોગ્રાફર", emoji: "📷", price: 18000 },
-      { id: "semi_candid_photo", title: "Semi-Candid Photographer", gujarati: "સેમી-કેન્ડિડ ફોટોગ્રાફર", emoji: "🎞️", price: 14000 },
-      { id: "cinematographer", title: "Cinematographer", gujarati: "સિનેમેટોગ્રાફર", emoji: "🎬", price: 25000 },
-      { id: "drone_pilot", title: "Drone Pilot", gujarati: "ડ્રોન પાયલટ", emoji: "🛸", price: 12000 },
-      { id: "supporting_crew", title: "Supporting Crew", gujarati: "સપોર્ટિંગ ક્રૂ / આસિસ્ટન્ટ", emoji: "👥", price: 5000 }
+      { id: "traditional_photo", showKey: "showRateTraditionalPhoto", enabled: true, title: "Traditional Photographer", gujarati: "ટ્રેડિશનલ ફોટોગ્રાફર", emoji: "📸", price: 10000 },
+      { id: "traditional_video", showKey: "showRateTraditionalVideo", enabled: true, title: "Traditional Videographer", gujarati: "ટ્રેડિશનલ વિડિયોગ્રાફર", emoji: "📹", price: 12000 },
+      { id: "candid_photo", showKey: "showRateCandidPhoto", enabled: true, title: "Candid Photographer", gujarati: "કેન્ડિડ ફોટોગ્રાફર", emoji: "📷", price: 18000 },
+      { id: "semi_candid_photo", showKey: "showRateSemiCandidPhoto", enabled: true, title: "Semi-Candid Photographer", gujarati: "સેમી-કેન્ડિડ ફોટોગ્રાફર", emoji: "🎞️", price: 14000 },
+      { id: "cinematographer", showKey: "showRateCinematographer", enabled: true, title: "Cinematographer", gujarati: "સિનેમેટોગ્રાફર", emoji: "🎬", price: 25000 },
+      { id: "drone_pilot", showKey: "showRateDronePilot", enabled: true, title: "Drone Pilot", gujarati: "ડ્રોન પાયલટ", emoji: "🛸", price: 12000 },
+      { id: "supporting_crew", showKey: "showRateSupportingCrew", enabled: true, title: "Supporting Crew", gujarati: "સપોર્ટિંગ ક્રૂ / આસિસ્ટન્ટ", emoji: "👥", price: 5000 }
     ];
+
+    function getVisibleCrewRoles() {
+      const visible = CREW_ROLES.filter(r => r.enabled !== false);
+      return visible.length > 0 ? visible : [CREW_ROLES[0]];
+    }
+
+    function getDefaultCrewId() {
+      return getVisibleCrewRoles()[0].id;
+    }
 
     // Live Date Slots synced with Firestore
     window.LIVE_DATE_SLOTS = {
@@ -1068,6 +1097,24 @@
         if (p.rateDronePilot) updatePrice('drone_pilot', p.rateDronePilot);
         if (p.rateSupportingCrew) updatePrice('supporting_crew', p.rateSupportingCrew);
 
+        CREW_ROLES.forEach(role => {
+          role.enabled = (p[role.showKey] !== false);
+        });
+        if (!CREW_ROLES.some(r => r.enabled)) {
+          CREW_ROLES[0].enabled = true;
+        }
+
+        const visibleIds = new Set(getVisibleCrewRoles().map(r => r.id));
+        const fallbackId = getDefaultCrewId();
+        Object.keys(window.DATE_CREW_MAP).forEach(dateKey => {
+          const currentSet = window.DATE_CREW_MAP[dateKey];
+          const filteredSet = new Set(Array.from(currentSet).filter(id => visibleIds.has(id)));
+          if (filteredSet.size === 0) {
+            filteredSet.add(fallbackId);
+          }
+          window.DATE_CREW_MAP[dateKey] = filteredSet;
+        });
+
         renderDateWiseCrewCards();
         updateTotalPackage();
       };
@@ -1126,7 +1173,7 @@
           } else {
             selectedDates.add(isoDate);
             if (!window.DATE_CREW_MAP[isoDate]) {
-              window.DATE_CREW_MAP[isoDate] = new Set(["traditional_photo"]);
+              window.DATE_CREW_MAP[isoDate] = new Set([getDefaultCrewId()]);
             }
           }
           renderCalendar();
@@ -1194,15 +1241,16 @@
         return;
       }
 
+      const visibleRoles = getVisibleCrewRoles();
       const sorted = Array.from(selectedDates).sort();
       sorted.forEach((isoDate, index) => {
         if (!window.DATE_CREW_MAP[isoDate]) {
-          window.DATE_CREW_MAP[isoDate] = new Set(["traditional_photo"]);
+          window.DATE_CREW_MAP[isoDate] = new Set([getDefaultCrewId()]);
         }
         const currentCrewSet = window.DATE_CREW_MAP[isoDate];
 
         // Compute subtotal for this date
-        const daySubtotal = CREW_ROLES
+        const daySubtotal = visibleRoles
           .filter(r => currentCrewSet.has(r.id))
           .reduce((sum, r) => sum + r.price, 0);
 
@@ -1210,7 +1258,7 @@
         card.className = 'date-card';
 
         let chipsHtml = '';
-        CREW_ROLES.forEach(role => {
+        visibleRoles.forEach(role => {
           const isActive = currentCrewSet.has(role.id);
           chipsHtml += `
             <div class="date-crew-chip ${isActive ? 'active' : ''}" data-date="${isoDate}" data-role="${role.id}">
@@ -1286,9 +1334,10 @@
         return;
       }
 
+      const visibleRoles = getVisibleCrewRoles();
       sorted.forEach((isoDate, idx) => {
         const crewSet = window.DATE_CREW_MAP[isoDate] || new Set();
-        const selectedCrew = CREW_ROLES.filter(r => crewSet.has(r.id));
+        const selectedCrew = visibleRoles.filter(r => crewSet.has(r.id));
         const daySubtotal = selectedCrew.reduce((s, r) => s + r.price, 0);
         calculatedGrandTotal += daySubtotal;
 
@@ -1333,9 +1382,10 @@
       let dayByDayBreakdown = [];
       let totalAutoAmount = 0;
 
+      const visibleRoles = getVisibleCrewRoles();
       sortedDates.forEach((isoDate, idx) => {
         const crewSet = window.DATE_CREW_MAP[isoDate] || new Set();
-        const selectedCrew = CREW_ROLES.filter(r => crewSet.has(r.id));
+        const selectedCrew = visibleRoles.filter(r => crewSet.has(r.id));
         const daySubtotal = selectedCrew.reduce((s, r) => s + r.price, 0);
         totalAutoAmount += daySubtotal;
         const crewNames = selectedCrew.map(r => `${r.emoji} ${r.title}`).join(", ");

@@ -25,7 +25,14 @@ data class StudioProfile(
     val rateSemiCandidPhoto: Double = 14000.0,
     val rateCinematographer: Double = 25000.0,
     val rateDronePilot: Double = 12000.0,
-    val rateSupportingCrew: Double = 5000.0
+    val rateSupportingCrew: Double = 5000.0,
+    val showRateTraditionalPhoto: Boolean = true,
+    val showRateTraditionalVideo: Boolean = true,
+    val showRateCandidPhoto: Boolean = true,
+    val showRateSemiCandidPhoto: Boolean = true,
+    val showRateCinematographer: Boolean = true,
+    val showRateDronePilot: Boolean = true,
+    val showRateSupportingCrew: Boolean = true
 ) {
     companion object {
         const val DEFAULT_CAMERA_GEAR =

@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.example.data.model.BookingRequest
 import com.example.data.model.DateStatus
@@ -16,7 +17,7 @@ import kotlinx.coroutines.launch
 
 @Database(
     entities = [StudioProfile::class, StudioDateSlot::class, BookingRequest::class],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -26,6 +27,18 @@ abstract class AppDatabase : RoomDatabase() {
         @Volatile
         private var INSTANCE: AppDatabase? = null
 
+        private val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE studio_profile ADD COLUMN showRateTraditionalPhoto INTEGER NOT NULL DEFAULT 1")
+                db.execSQL("ALTER TABLE studio_profile ADD COLUMN showRateTraditionalVideo INTEGER NOT NULL DEFAULT 1")
+                db.execSQL("ALTER TABLE studio_profile ADD COLUMN showRateCandidPhoto INTEGER NOT NULL DEFAULT 1")
+                db.execSQL("ALTER TABLE studio_profile ADD COLUMN showRateSemiCandidPhoto INTEGER NOT NULL DEFAULT 1")
+                db.execSQL("ALTER TABLE studio_profile ADD COLUMN showRateCinematographer INTEGER NOT NULL DEFAULT 1")
+                db.execSQL("ALTER TABLE studio_profile ADD COLUMN showRateDronePilot INTEGER NOT NULL DEFAULT 1")
+                db.execSQL("ALTER TABLE studio_profile ADD COLUMN showRateSupportingCrew INTEGER NOT NULL DEFAULT 1")
+            }
+        }
+
         fun getDatabase(context: Context, scope: CoroutineScope): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -33,6 +46,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "studio_expo_db"
                 )
+                    .addMigrations(MIGRATION_3_4)
                     .fallbackToDestructiveMigration()
                     .addCallback(DatabaseCallback(scope))
                     .build()

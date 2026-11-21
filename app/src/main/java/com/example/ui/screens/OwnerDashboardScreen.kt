@@ -53,6 +53,7 @@ import androidx.compose.ui.unit.sp
 import com.example.data.local.DateUtils
 import com.example.data.model.BookedCustomerGroup
 import com.example.data.model.BookingRequest
+import com.example.data.model.BookingStatus
 import com.example.data.model.DateStatus
 import com.example.data.model.StudioDateSlot
 import com.example.data.model.StudioProfile
@@ -104,9 +105,13 @@ fun OwnerDashboardScreen(
     }
 
     val bookedGroups: List<BookedCustomerGroup> = remember(bookedDateSlots, allBookings, profile) {
+        val confirmedBookings = allBookings.filter { it.status == BookingStatus.CONFIRMED }
         val groupMap = linkedMapOf<String, MutableList<StudioDateSlot>>()
         bookedDateSlots.forEach { slot ->
-            val matchingBooking = allBookings.firstOrNull { booking ->
+            val matchingBooking = confirmedBookings.firstOrNull { booking ->
+                booking.dateStr == slot.dateStr ||
+                    booking.dateStr.split(",").map { it.trim() }.contains(slot.dateStr)
+            } ?: allBookings.firstOrNull { booking ->
                 booking.dateStr == slot.dateStr ||
                     booking.dateStr.split(",").map { it.trim() }.contains(slot.dateStr)
             }
@@ -126,8 +131,10 @@ fun OwnerDashboardScreen(
             val cName = parts[0]
             val cPhone = if (parts.size > 1) parts[1] else ""
             val sortedDates = slots.map { it.dateStr }.distinct().sorted()
+            val sortedDateSet = sortedDates.toSet()
+
             val dateCrewMap = slots.associate { s ->
-                val matchingBooking = allBookings.firstOrNull { booking ->
+                val matchingBooking = confirmedBookings.firstOrNull { booking ->
                     booking.dateStr == s.dateStr ||
                         booking.dateStr.split(",").map { it.trim() }.contains(s.dateStr)
                 }
@@ -138,26 +145,29 @@ fun OwnerDashboardScreen(
                 val cleanWork = if (parsedRoles.isNotEmpty()) WorkTypeCatalog.formatRolesSummary(parsedRoles) else rawWork
                 s.dateStr to cleanWork
             }
-            val totalAmt = slots.sumOf { s ->
-                val crewForSlot = dateCrewMap[s.dateStr] ?: s.workType ?: ""
-                val crewEstimate = WorkTypeCatalog.calculateEstimateForDate(crewForSlot, profile)
-                if (s.amount > 0.0) {
-                    s.amount
-                } else if (crewEstimate > 0.0) {
-                    crewEstimate
-                } else {
-                    val matchingBooking = allBookings.firstOrNull { booking ->
-                        booking.dateStr == s.dateStr ||
-                            booking.dateStr.split(",").map { it.trim() }.contains(s.dateStr)
-                    }
-                    if (matchingBooking != null && matchingBooking.amount > 0.0) {
-                        val bDates = matchingBooking.dateStr.split(",").map { it.trim() }.filter { it.isNotBlank() }.size.coerceAtLeast(1)
-                        matchingBooking.amount / bDates
-                    } else {
-                        0.0
-                    }
+
+            // Use confirmed BookingRequest.amount (matching Requests page) as primary source of truth,
+            // counting each multi-date BookingRequest once without duplicating across dates.
+            val coveredDates = mutableSetOf<String>()
+            var confirmedReqTotal = 0.0
+            confirmedBookings.forEach { booking ->
+                if (booking.amount <= 0.0) return@forEach
+                val bDates = booking.dateStr.split(",").map { it.trim() }.filter { it.isNotBlank() }
+                val overlapDates = bDates.filter { sortedDateSet.contains(it) && !coveredDates.contains(it) }
+                if (overlapDates.isNotEmpty()) {
+                    val ratio = overlapDates.size.toDouble() / bDates.size.coerceAtLeast(1).toDouble()
+                    confirmedReqTotal += kotlin.math.round(booking.amount * ratio)
+                    coveredDates.addAll(overlapDates)
                 }
             }
+
+            val uncoveredSlotsTotal = slots.filter { !coveredDates.contains(it.dateStr) }.sumOf { s ->
+                val crewForSlot = dateCrewMap[s.dateStr] ?: s.workType ?: ""
+                val crewEstimate = WorkTypeCatalog.calculateEstimateForDate(crewForSlot, profile)
+                if (s.amount > 0.0) s.amount else crewEstimate
+            }
+
+            val totalAmt = confirmedReqTotal + uncoveredSlotsTotal
             val distinctCrews = dateCrewMap.values.distinct()
             val summary = if (distinctCrews.size == 1) {
                 distinctCrews.first()

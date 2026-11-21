@@ -296,13 +296,23 @@ class StudioRepository(
         }
         if (sumEstimates > 0.0) {
             // Proportional allocation preserves exact per-date crew rates when totalAmount == sumEstimates,
-            // and scales cleanly if the owner entered a custom total.
-            return estimates.map { est ->
+            // and adjusts any rounding remainder on the last date so the sum ALWAYS equals totalAmount.
+            val allocated = estimates.map { est ->
                 kotlin.math.round((est / sumEstimates) * totalAmount)
+            }.toMutableList()
+            val diff = kotlin.math.round(totalAmount - allocated.sum())
+            if (diff != 0.0 && allocated.isNotEmpty()) {
+                allocated[allocated.lastIndex] = (allocated.last() + diff).coerceAtLeast(0.0)
             }
+            return allocated
         }
-        val evenShare = totalAmount / workTypes.size
-        return List(workTypes.size) { evenShare }
+        val evenShare = kotlin.math.round(totalAmount / workTypes.size)
+        val allocated = MutableList(workTypes.size) { evenShare }
+        val diff = kotlin.math.round(totalAmount - allocated.sum())
+        if (diff != 0.0 && allocated.isNotEmpty()) {
+            allocated[allocated.lastIndex] = (allocated.last() + diff).coerceAtLeast(0.0)
+        }
+        return allocated
     }
 
     fun generateWhatsAppShareMessage(
@@ -557,6 +567,13 @@ $webBookingUrl
                 "rateCinematographer" to profile.rateCinematographer,
                 "rateDronePilot" to profile.rateDronePilot,
                 "rateSupportingCrew" to profile.rateSupportingCrew,
+                "showRateTraditionalPhoto" to profile.showRateTraditionalPhoto,
+                "showRateTraditionalVideo" to profile.showRateTraditionalVideo,
+                "showRateCandidPhoto" to profile.showRateCandidPhoto,
+                "showRateSemiCandidPhoto" to profile.showRateSemiCandidPhoto,
+                "showRateCinematographer" to profile.showRateCinematographer,
+                "showRateDronePilot" to profile.showRateDronePilot,
+                "showRateSupportingCrew" to profile.showRateSupportingCrew,
                 "updatedAt" to System.currentTimeMillis()
             )
             db.collection("studio_profile").document(studioId).set(data)

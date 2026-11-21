@@ -38,6 +38,8 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -93,8 +95,55 @@ fun OwnerProfileScreen(
     var rateCinematographerText by remember(profile) { mutableStateOf(baseProfile.rateCinematographer.toLong().toString()) }
     var rateDronePilotText by remember(profile) { mutableStateOf(baseProfile.rateDronePilot.toLong().toString()) }
     var rateSupportingCrewText by remember(profile) { mutableStateOf(baseProfile.rateSupportingCrew.toLong().toString()) }
+    var showTradPhoto by remember(profile) { mutableStateOf(baseProfile.showRateTraditionalPhoto) }
+    var showTradVideo by remember(profile) { mutableStateOf(baseProfile.showRateTraditionalVideo) }
+    var showCandidPhoto by remember(profile) { mutableStateOf(baseProfile.showRateCandidPhoto) }
+    var showSemiCandidPhoto by remember(profile) { mutableStateOf(baseProfile.showRateSemiCandidPhoto) }
+    var showCinematographer by remember(profile) { mutableStateOf(baseProfile.showRateCinematographer) }
+    var showDronePilot by remember(profile) { mutableStateOf(baseProfile.showRateDronePilot) }
+    var showSupportingCrew by remember(profile) { mutableStateOf(baseProfile.showRateSupportingCrew) }
     var cameraGear by remember(profile) { mutableStateOf(baseProfile.cameraGearDetails) }
     var customWhatsAppNote by remember(profile) { mutableStateOf(baseProfile.customWhatsAppNote) }
+
+    fun buildUpdatedProfile(
+        tradPhotoOn: Boolean = showTradPhoto,
+        tradVideoOn: Boolean = showTradVideo,
+        candidOn: Boolean = showCandidPhoto,
+        semiCandidOn: Boolean = showSemiCandidPhoto,
+        cinemaOn: Boolean = showCinematographer,
+        droneOn: Boolean = showDronePilot,
+        supportOn: Boolean = showSupportingCrew
+    ): StudioProfile {
+        val rate = perDayRateText.toDoubleOrNull() ?: baseProfile.perDayRate
+        return baseProfile.copy(
+            studioName = studioName.trim(),
+            photographerName = photographerName.trim(),
+            phone = phone.trim(),
+            whatsapp = whatsapp.trim(),
+            city = city.trim(),
+            bio = bio.trim(),
+            ownerPin = baseProfile.ownerPin,
+            perDayRate = rate,
+            rateTraditionalPhoto = rateTraditionalPhotoText.toDoubleOrNull() ?: baseProfile.rateTraditionalPhoto,
+            rateTraditionalVideo = rateTraditionalVideoText.toDoubleOrNull() ?: baseProfile.rateTraditionalVideo,
+            rateCandidPhoto = rateCandidPhotoText.toDoubleOrNull() ?: baseProfile.rateCandidPhoto,
+            rateSemiCandidPhoto = rateSemiCandidPhotoText.toDoubleOrNull() ?: baseProfile.rateSemiCandidPhoto,
+            rateCinematographer = rateCinematographerText.toDoubleOrNull() ?: baseProfile.rateCinematographer,
+            rateDronePilot = rateDronePilotText.toDoubleOrNull() ?: baseProfile.rateDronePilot,
+            rateSupportingCrew = rateSupportingCrewText.toDoubleOrNull() ?: baseProfile.rateSupportingCrew,
+            showRateTraditionalPhoto = tradPhotoOn,
+            showRateTraditionalVideo = tradVideoOn,
+            showRateCandidPhoto = candidOn,
+            showRateSemiCandidPhoto = semiCandidOn,
+            showRateCinematographer = cinemaOn,
+            showRateDronePilot = droneOn,
+            showRateSupportingCrew = supportOn,
+            cameraGearDetails = cameraGear.trim(),
+            customWhatsAppNote = customWhatsAppNote.trim()
+        )
+    }
+
+    fun countEnabled(vararg flags: Boolean): Int = flags.count { it }
 
     LazyColumn(
         modifier = modifier
@@ -284,107 +333,128 @@ fun OwnerProfileScreen(
                         color = StudioAmber
                     )
                     Text(
-                        text = "Set daily rates for each crew role (synced to calendar, bill & web page)",
+                        text = "Turn ON only the crew rates you want visible on the customer web link / ग्राहक वेब लिंक पर जो क्रू रेट दिखाना हो उसे ON रखें",
                         fontSize = 11.sp,
                         color = TextLightSecondary
                     )
 
-                    OutlinedTextField(
+                    CrewRateToggleField(
                         value = rateTraditionalPhotoText,
                         onValueChange = { rateTraditionalPhotoText = it },
-                        label = { Text("📸 Traditional Photographer Rate / ट्रेडिशनल फोटोग्राफर (₹)") },
-                        leadingIcon = { Text("₹", color = StudioAmber, fontWeight = FontWeight.Bold, fontSize = 16.sp, modifier = Modifier.padding(start = 12.dp)) },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.fillMaxWidth().testTag("profile_rate_trad_photo"),
-                        singleLine = true,
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = StudioAmber,
-                            cursorColor = StudioAmber
-                        )
+                        label = "📸 Traditional Photographer Rate / ट्रेडिशनल फोटोग्राफर (₹)",
+                        isEnabledOnLink = showTradPhoto,
+                        onToggleLink = { newVal ->
+                            if (!newVal && countEnabled(false, showTradVideo, showCandidPhoto, showSemiCandidPhoto, showCinematographer, showDronePilot, showSupportingCrew) == 0) {
+                                Toast.makeText(context, "Keep at least 1 crew ON / कम से कम 1 क्रू ON रखें", Toast.LENGTH_SHORT).show()
+                            } else {
+                                showTradPhoto = newVal
+                                onSaveProfile(buildUpdatedProfile(tradPhotoOn = newVal))
+                            }
+                        },
+                        fieldTag = "profile_rate_trad_photo",
+                        switchTag = "toggle_rate_trad_photo"
                     )
 
-                    OutlinedTextField(
+                    CrewRateToggleField(
                         value = rateTraditionalVideoText,
                         onValueChange = { rateTraditionalVideoText = it },
-                        label = { Text("📹 Traditional Videographer Rate / ट्रेडिशनल वीडियोग्राफर (₹)") },
-                        leadingIcon = { Text("₹", color = StudioAmber, fontWeight = FontWeight.Bold, fontSize = 16.sp, modifier = Modifier.padding(start = 12.dp)) },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.fillMaxWidth().testTag("profile_rate_trad_video"),
-                        singleLine = true,
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = StudioAmber,
-                            cursorColor = StudioAmber
-                        )
+                        label = "📹 Traditional Videographer Rate / ट्रेडिशनल वीडियोग्राफर (₹)",
+                        isEnabledOnLink = showTradVideo,
+                        onToggleLink = { newVal ->
+                            if (!newVal && countEnabled(showTradPhoto, false, showCandidPhoto, showSemiCandidPhoto, showCinematographer, showDronePilot, showSupportingCrew) == 0) {
+                                Toast.makeText(context, "Keep at least 1 crew ON / कम से कम 1 क्रू ON रखें", Toast.LENGTH_SHORT).show()
+                            } else {
+                                showTradVideo = newVal
+                                onSaveProfile(buildUpdatedProfile(tradVideoOn = newVal))
+                            }
+                        },
+                        fieldTag = "profile_rate_trad_video",
+                        switchTag = "toggle_rate_trad_video"
                     )
 
-                    OutlinedTextField(
+                    CrewRateToggleField(
                         value = rateCandidPhotoText,
                         onValueChange = { rateCandidPhotoText = it },
-                        label = { Text("📷 Candid Photographer Rate / कैंडिड फोटोग्राफर (₹)") },
-                        leadingIcon = { Text("₹", color = StudioAmber, fontWeight = FontWeight.Bold, fontSize = 16.sp, modifier = Modifier.padding(start = 12.dp)) },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.fillMaxWidth().testTag("profile_rate_candid_photo"),
-                        singleLine = true,
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = StudioAmber,
-                            cursorColor = StudioAmber
-                        )
+                        label = "📷 Candid Photographer Rate / कैंडिड फोटोग्राफर (₹)",
+                        isEnabledOnLink = showCandidPhoto,
+                        onToggleLink = { newVal ->
+                            if (!newVal && countEnabled(showTradPhoto, showTradVideo, false, showSemiCandidPhoto, showCinematographer, showDronePilot, showSupportingCrew) == 0) {
+                                Toast.makeText(context, "Keep at least 1 crew ON / कम से कम 1 क्रू ON रखें", Toast.LENGTH_SHORT).show()
+                            } else {
+                                showCandidPhoto = newVal
+                                onSaveProfile(buildUpdatedProfile(candidOn = newVal))
+                            }
+                        },
+                        fieldTag = "profile_rate_candid_photo",
+                        switchTag = "toggle_rate_candid_photo"
                     )
 
-                    OutlinedTextField(
+                    CrewRateToggleField(
                         value = rateSemiCandidPhotoText,
                         onValueChange = { rateSemiCandidPhotoText = it },
-                        label = { Text("🎞️ Semi-Candid Photographer Rate / सेमी-कैंडिड फोटोग्राफर (₹)") },
-                        leadingIcon = { Text("₹", color = StudioAmber, fontWeight = FontWeight.Bold, fontSize = 16.sp, modifier = Modifier.padding(start = 12.dp)) },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.fillMaxWidth().testTag("profile_rate_semicandid_photo"),
-                        singleLine = true,
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = StudioAmber,
-                            cursorColor = StudioAmber
-                        )
+                        label = "🎞️ Semi-Candid Photographer Rate / सेमी-कैंडिड फोटोग्राफर (₹)",
+                        isEnabledOnLink = showSemiCandidPhoto,
+                        onToggleLink = { newVal ->
+                            if (!newVal && countEnabled(showTradPhoto, showTradVideo, showCandidPhoto, false, showCinematographer, showDronePilot, showSupportingCrew) == 0) {
+                                Toast.makeText(context, "Keep at least 1 crew ON / कम से कम 1 क्रू ON रखें", Toast.LENGTH_SHORT).show()
+                            } else {
+                                showSemiCandidPhoto = newVal
+                                onSaveProfile(buildUpdatedProfile(semiCandidOn = newVal))
+                            }
+                        },
+                        fieldTag = "profile_rate_semicandid_photo",
+                        switchTag = "toggle_rate_semicandid_photo"
                     )
 
-                    OutlinedTextField(
+                    CrewRateToggleField(
                         value = rateCinematographerText,
                         onValueChange = { rateCinematographerText = it },
-                        label = { Text("🎬 Cinematographer Rate / सिनेमैटोग्राफर (₹)") },
-                        leadingIcon = { Text("₹", color = StudioAmber, fontWeight = FontWeight.Bold, fontSize = 16.sp, modifier = Modifier.padding(start = 12.dp)) },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.fillMaxWidth().testTag("profile_rate_cinematographer"),
-                        singleLine = true,
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = StudioAmber,
-                            cursorColor = StudioAmber
-                        )
+                        label = "🎬 Cinematographer Rate / सिनेमैटोग्राफर (₹)",
+                        isEnabledOnLink = showCinematographer,
+                        onToggleLink = { newVal ->
+                            if (!newVal && countEnabled(showTradPhoto, showTradVideo, showCandidPhoto, showSemiCandidPhoto, false, showDronePilot, showSupportingCrew) == 0) {
+                                Toast.makeText(context, "Keep at least 1 crew ON / कम से कम 1 क्रू ON रखें", Toast.LENGTH_SHORT).show()
+                            } else {
+                                showCinematographer = newVal
+                                onSaveProfile(buildUpdatedProfile(cinemaOn = newVal))
+                            }
+                        },
+                        fieldTag = "profile_rate_cinematographer",
+                        switchTag = "toggle_rate_cinematographer"
                     )
 
-                    OutlinedTextField(
+                    CrewRateToggleField(
                         value = rateDronePilotText,
                         onValueChange = { rateDronePilotText = it },
-                        label = { Text("🛸 Drone Pilot Rate / ड्रोन पायलट (₹)") },
-                        leadingIcon = { Text("₹", color = StudioAmber, fontWeight = FontWeight.Bold, fontSize = 16.sp, modifier = Modifier.padding(start = 12.dp)) },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.fillMaxWidth().testTag("profile_rate_drone_pilot"),
-                        singleLine = true,
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = StudioAmber,
-                            cursorColor = StudioAmber
-                        )
+                        label = "🛸 Drone Pilot Rate / ड्रोन पायलट (₹)",
+                        isEnabledOnLink = showDronePilot,
+                        onToggleLink = { newVal ->
+                            if (!newVal && countEnabled(showTradPhoto, showTradVideo, showCandidPhoto, showSemiCandidPhoto, showCinematographer, false, showSupportingCrew) == 0) {
+                                Toast.makeText(context, "Keep at least 1 crew ON / कम से कम 1 क्रू ON रखें", Toast.LENGTH_SHORT).show()
+                            } else {
+                                showDronePilot = newVal
+                                onSaveProfile(buildUpdatedProfile(droneOn = newVal))
+                            }
+                        },
+                        fieldTag = "profile_rate_drone_pilot",
+                        switchTag = "toggle_rate_drone_pilot"
                     )
 
-                    OutlinedTextField(
+                    CrewRateToggleField(
                         value = rateSupportingCrewText,
                         onValueChange = { rateSupportingCrewText = it },
-                        label = { Text("👥 Supporting Crew Rate / सपोर्टिंग क्रू / असिस्टेंट (₹)") },
-                        leadingIcon = { Text("₹", color = StudioAmber, fontWeight = FontWeight.Bold, fontSize = 16.sp, modifier = Modifier.padding(start = 12.dp)) },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.fillMaxWidth().testTag("profile_rate_supporting_crew"),
-                        singleLine = true,
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = StudioAmber,
-                            cursorColor = StudioAmber
-                        )
+                        label = "👥 Supporting Crew Rate / सपोर्टिंग क्रू / असिस्टेंट (₹)",
+                        isEnabledOnLink = showSupportingCrew,
+                        onToggleLink = { newVal ->
+                            if (!newVal && countEnabled(showTradPhoto, showTradVideo, showCandidPhoto, showSemiCandidPhoto, showCinematographer, showDronePilot, false) == 0) {
+                                Toast.makeText(context, "Keep at least 1 crew ON / कम से कम 1 क्रू ON रखें", Toast.LENGTH_SHORT).show()
+                            } else {
+                                showSupportingCrew = newVal
+                                onSaveProfile(buildUpdatedProfile(supportOn = newVal))
+                            }
+                        },
+                        fieldTag = "profile_rate_supporting_crew",
+                        switchTag = "toggle_rate_supporting_crew"
                     )
 
                     OutlinedTextField(
@@ -470,26 +540,7 @@ fun OwnerProfileScreen(
         item {
             Button(
                 onClick = {
-                    val rate = perDayRateText.toDoubleOrNull() ?: baseProfile.perDayRate
-                    val updated = baseProfile.copy(
-                        studioName = studioName.trim(),
-                        photographerName = photographerName.trim(),
-                        phone = phone.trim(),
-                        whatsapp = whatsapp.trim(),
-                        city = city.trim(),
-                        bio = bio.trim(),
-                        ownerPin = baseProfile.ownerPin,
-                        perDayRate = rate,
-                        rateTraditionalPhoto = rateTraditionalPhotoText.toDoubleOrNull() ?: baseProfile.rateTraditionalPhoto,
-                        rateTraditionalVideo = rateTraditionalVideoText.toDoubleOrNull() ?: baseProfile.rateTraditionalVideo,
-                        rateCandidPhoto = rateCandidPhotoText.toDoubleOrNull() ?: baseProfile.rateCandidPhoto,
-                        rateSemiCandidPhoto = rateSemiCandidPhotoText.toDoubleOrNull() ?: baseProfile.rateSemiCandidPhoto,
-                        rateCinematographer = rateCinematographerText.toDoubleOrNull() ?: baseProfile.rateCinematographer,
-                        rateDronePilot = rateDronePilotText.toDoubleOrNull() ?: baseProfile.rateDronePilot,
-                        rateSupportingCrew = rateSupportingCrewText.toDoubleOrNull() ?: baseProfile.rateSupportingCrew,
-                        cameraGearDetails = cameraGear.trim(),
-                        customWhatsAppNote = customWhatsAppNote.trim()
-                    )
+                    val updated = buildUpdatedProfile()
                     onSaveProfile(updated)
                     Toast.makeText(context, "Profile saved successfully! / प्रोफाइल सेव हो गई है!", Toast.LENGTH_SHORT).show()
                 },
@@ -532,6 +583,67 @@ fun OwnerProfileScreen(
             }
 
             Spacer(modifier = Modifier.height(24.dp))
+        }
+    }
+}
+
+@Composable
+private fun CrewRateToggleField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    label: String,
+    isEnabledOnLink: Boolean,
+    onToggleLink: (Boolean) -> Unit,
+    fieldTag: String,
+    switchTag: String
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        OutlinedTextField(
+            value = value,
+            onValueChange = onValueChange,
+            label = { Text(label) },
+            leadingIcon = {
+                Text(
+                    "₹",
+                    color = StudioAmber,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp,
+                    modifier = Modifier.padding(start = 12.dp)
+                )
+            },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            modifier = Modifier.fillMaxWidth().testTag(fieldTag),
+            singleLine = true,
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = StudioAmber,
+                cursorColor = StudioAmber
+            )
+        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 4.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = if (isEnabledOnLink) "Show on Link: ON / लिंक पर दिखेगा" else "Show on Link: OFF / लिंक पर नहीं दिखेगा",
+                fontSize = 11.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = if (isEnabledOnLink) Color(0xFF4ADE80) else TextLightSecondary
+            )
+            Switch(
+                checked = isEnabledOnLink,
+                onCheckedChange = onToggleLink,
+                modifier = Modifier.testTag(switchTag),
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = Color.Black,
+                    checkedTrackColor = StudioAmber
+                )
+            )
         }
     }
 }
